@@ -1,0 +1,52 @@
+@import 'tailwindcss' important;
+
+@theme {
+    /* Primary Colors */
+    --color-go-blue: oklch(0.7 0.25 200);        /* #00D4FF equivalent */
+    --color-go-purple: oklch(0.65 0.3 270);      /* #6B46FF equivalent */
+    --color-go-green: oklch(0.8 0.25 160);       /* #00FF88 equivalent */
+    --color-go-orange: oklch(0.7 0.25 40);       /* #FF6B00 equivalent */
+    --color-go-pink: oklch(0.7 0.3 320);         /* #FF0080 equivalent */
+    --color-go-gold: oklch(0.85 0.15 80);        /* #FFD700 equivalent */
+
+    /* Background System */
+    --color-bg-primary: oklch(0.12 0.02 240);    /* #0A0A0F equivalent */
+    --color-bg-secondary: oklch(0.2 0.03 240);   /* #1A1A2E equivalent */
+    --color-bg-tertiary: oklch(0.25 0.04 225);   /* #16213E equivalent */
+    --color-bg-card: oklch(0.3 0.05 225);        /* #1E2A54 equivalent */
+
+    /* Text Colors */
+    --color-text-primary: oklch(1 0 0);          /* #FFFFFF */
+    --color-text-secondary: oklch(0.75 0.02 210); /* #B8C5D6 equivalent */
+    --color-text-accent: var(--color-go-blue);
+    --color-text-warning: var(--color-go-gold);
+
+    /* Font Families */
+    --font-family-inter: "Inter", system-ui, sans-serif;
+
+    /* Animations */
+    --animate-float-particle: float-particle 6s infinite linear;
+    --animate-pulse-glow: pulse-glow 2s ease-in-out infinite alternate;
+    --animate-border-flow: border-flow 3s ease infinite;
+
+    /* Shadows */
+    --shadow-glow-blue: 0 0 30px color-mix(in srgb, var(--color-go-blue) 30%, transparent);
+    --shadow-glow-purple: 0 0 30px color-mix(in srgb, var(--color-go-purple) 30%, transparent);
+    --shadow-glow-green: 0 0 30px color-mix(in srgb, var(--color-go-green) 30%, transparent);
+    --shadow-card: 0 10px 40px color-mix(in srgb, var(--color-bg-primary) 40%, transparent);
+    --shadow-elevated: 0 20px 60px color-mix(in srgb, var(--color-go-blue) 20%, transparent);
+
+    /* Custom Colors for Tailwind */
+    --color-primary: var(--color-go-blue);
+    --color-secondary: var(--color-bg-secondary);
+    --color-accent: var(--color-go-purple);
+    --color-background: var(--color-bg-primary);
+    --color-foreground: var(--color-text-primary);
+    --color-card: var(--color-bg-card);
+    --color-muted: var(--color-bg-tertiary);
+    --color-border: var(--color-bg-tertiary);
+    --color-destructive: oklch(0.6 0.25 15);
+
+    /* Spacing & Sizing */
+    --radius: 1rem;
+}
