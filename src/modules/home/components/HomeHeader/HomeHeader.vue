@@ -1,5 +1,5 @@
 <template>
-  <q-header class="relative bg-bg-primary/95 backdrop-blur-md border-b border-go-blue/30">
+  <q-header class="bg-bg-primary/95 backdrop-blur-md border-b border-go-blue/30">
     <div class="container mx-auto py-4">
       <q-toolbar>
         <q-toolbar-title class="flex items-center md:justify-center gap-2">
@@ -7,7 +7,7 @@
             <q-img class="w-10 h-10" fit="fill" siz src="src/assets/golazo_kings_logo.svg" />
           </q-avatar>
           <div>
-            <h1 class="text-2xl font-bold text-gradient">GolazoKings</h1>
+            <h1 class="text-2xl font-bold text-gradient-go">GolazoKings</h1>
             <p class="text-xs text-gray-400 uppercase tracking-wider m-0">
               Constructor Kings League
             </p>
@@ -19,6 +19,7 @@
 
       <q-toolbar inset class="hidden md:flex justify-center mt-4">
         <q-tabs
+          v-model="activeTab"
           dense
           no-caps
           inline-label
@@ -28,10 +29,10 @@
           active-bg-color="primary"
           class="text-white border border-go-blue/30 rounded-2xl"
         >
-          <q-tab v-for="tab in tabs" :key="tab.name" :name="tab.name">
+          <q-route-tab v-for="tab in tabs" :key="tab.name" :name="tab.name" :to="tab.to">
             <q-icon :name="tab.icon" :size="tab.iconSize" />
             <p class="my-auto ml-2 text-sm">{{ tab.label }}</p>
-          </q-tab>
+          </q-route-tab>
         </q-tabs>
       </q-toolbar>
     </div>
@@ -39,7 +40,10 @@
 </template>
 
 <script setup lang="ts">
-import { HOME_TABS_DATA as tabs } from './tabs';
+import { ref } from 'vue';
+import { HOME_TABS_CONFIG as tabs } from './tabs';
 
 defineEmits(['open-menu']);
+
+const activeTab = ref('home');
 </script>

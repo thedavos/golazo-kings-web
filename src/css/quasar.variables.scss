@@ -8,19 +8,19 @@
 // Your own variables (that are declared here) and Quasar's own
 // ones will be available out of the box in your .vue/.scss/.sass files
 
-// It's highly recommended to change the GoHomeHeader colors
+// It's highly recommended to change the HomeHeader colors
 // to match your app's branding.
 // Tip: Use the "Theme Builder" on Quasar's documentation website.
 // Using CSS variables from /src/css/app.scss as the single source of truth.
 // Note: The variables in app.scss are defined as HSL component values, so we wrap them in hsl().
-$primary   : hsl(var(--color-go-blue));
-$secondary : hsl(var(--color-bg-secondary));
-$accent    : hsl(var(--color-go-purple));
+$primary   : var(--color-go-blue);
+$secondary : var(--color-bg-secondary);
+$accent    : var(--color-go-purple);
 
-$dark      : hsl(var(--color-bg-primary));
-$dark-page : hsl(var(--color-bg-primary));
+$dark      : var(--color-bg-primary);
+$dark-page : var(--color-bg-primary);
 
-$positive  : hsl(var(--color-go-green));
-$negative  : hsl(var(--color-destructive));
-$info      : hsl(var(--color-go-blue));
-$warning   : hsl(var(--color-go-gold));
+$positive  : var(--color-go-green);
+$negative  : var(--color-destructive);
+$info      : var(--color-go-blue);
+$warning   : var(--color-go-gold);

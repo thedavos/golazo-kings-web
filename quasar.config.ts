@@ -137,7 +137,7 @@ export default defineConfig((ctx) => {
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-ssr/configuring-ssr
     ssr: {
-      prodPort: 3000, // The GoHomeHeader port that the production server should use
+      prodPort: 3000, // The HomeHeader port that the production server should use
       // (gets superseded if process.env.PORT is specified at runtime)
 
       middlewares: [

@@ -1,13 +1,13 @@
 <template>
-  <q-layout view="hHh lpR fFf">
-    <go-home-header @open-menu="drawerRight = true" />
+  <q-layout view="hHh lpR fFf" class="min-h-screen bg-background">
+    <home-header @open-menu="drawerRight = true" />
 
     <q-page-container>
       <router-view />
     </q-page-container>
 
     <q-drawer v-model="drawerRight" side="right" behavior="mobile">
-      <q-scroll-area class="fit bg-secondary">
+      <q-scroll-area class="fit bg-white">
         <q-toolbar>
           <q-toolbar-title class="flex items-center"> Menú </q-toolbar-title>
 
@@ -31,8 +31,8 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { HOME_TABS_DATA as tabs } from 'src/modules/home/components/GoHomeHeader';
-import GoHomeHeader from 'src/modules/home/components/GoHomeHeader';
+import { HOME_TABS_CONFIG as tabs } from 'src/modules/home/components/HomeHeader';
+import HomeHeader from 'src/modules/home/components/HomeHeader';
 
 const drawerRight = ref(false);
 </script>
