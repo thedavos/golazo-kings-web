@@ -15,11 +15,7 @@
     <div class="relative z-10 container q-mx-auto q-px-md text-center">
       <div class="hero-content q-mx-auto">
         <!-- Headline -->
-        <div class="flex items-center justify-center gap-4 mb-6">
-          <q-icon name="fas fa-crown" size="4rem" class="text-go-gold animate-premium-pulse" />
-          <h1 class="text-6xl lg:text-7xl font-bold font-inter text-gradient-go">GolazoKings</h1>
-          <q-icon name="fas fa-crown" size="4rem" class="text-go-gold animate-premium-pulse" />
-        </div>
+        <h1 class="text-6xl lg:text-7xl font-bold font-inter text-gradient-go mb-4">GolazoKings</h1>
 
         <h2 class="text-4xl lg:text-5xl font-bold text-white mb-6 leading-tight">
           Crea tu alineación perfecta de
@@ -88,7 +84,7 @@
             <div
               class="absolute bottom-16 left-1/3 w-8 h-8 bg-go-purple rounded-full flex items-center justify-center text-xs font-bold text-white shadow-glow-purple"
             >
-              AG
+              CP
             </div>
             <div
               class="absolute bottom-16 right-1/3 w-8 h-8 bg-go-purple rounded-full flex items-center justify-center text-xs font-bold text-white shadow-glow-purple"
@@ -108,18 +104,19 @@
     </div>
 
     <!-- Floating particles -->
-    <div class="absolute inset-0 pointer-events-none">
-      <div
-        v-for="i in 6"
-        :key="i"
-        class="w-1 h-1 bg-go-gold rounded-full absolute animate-float-particle"
-        :style="getParticleStyle(i)"
-      />
-    </div>
+    <background-particles
+      class="absolute inset-0 pointer-events-none"
+      :quantity="30"
+      :ease="100"
+      :color="'#F59E0B'"
+      :staticity="5"
+      refresh
+    />
   </section>
 </template>
 
 <script setup lang="ts">
+import BackgroundParticles from 'src/modules/shared/backgrounds/BackgroundParticles.vue';
 import heroBackground from 'src/assets/home/hero-background-B1OqpS2R.jpg';
 
 interface Props {
@@ -130,14 +127,5 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   onExplorePlayers: () => {},
   onBuildSquad: () => {},
-});
-
-const getParticleStyle = (index: number) => ({
-  left: `${15 + (index - 1) * 15}%`,
-  top: `${30 + ((index - 1) % 2) * 40}%`,
-  width: '4px',
-  height: '4px',
-  animationDelay: `${(index - 1) * 2}s`,
-  animationDuration: '8s',
 });
 </script>

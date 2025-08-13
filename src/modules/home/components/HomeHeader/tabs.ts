@@ -38,10 +38,10 @@ export const HOME_TABS_CONFIG: HomeTab[] = [
     to: '/guess-roster',
   },
   {
-    name: 'salary-division',
+    name: 'budget-division',
     icon: 'fa fa-money-bill',
     iconSize: HOME_TAB_ICON_SIZE,
     label: 'Reparto de salarios',
-    to: '/salary-division',
+    to: '/budget',
   },
 ];

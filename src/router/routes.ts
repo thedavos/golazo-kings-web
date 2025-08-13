@@ -30,9 +30,9 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/MainLayout.vue'),
     children: [
       {
-        name: 'explore-players',
+        name: 'players',
         path: '',
-        component: () => import('src/modules/explore-players/pages/ExplorePlayersPage'),
+        component: () => import('src/modules/players/pages/ExplorePlayersPage'),
       },
     ],
   },
@@ -50,13 +50,13 @@ const routes: RouteRecordRaw[] = [
   },
 
   {
-    path: '/salary-division',
+    path: '/budget',
     component: () => import('layouts/MainLayout.vue'),
     children: [
       {
-        name: 'salary-division',
+        name: 'budget-division',
         path: '',
-        component: () => import('src/modules/salary-division/pages/SalaryDivisionPage'),
+        component: () => import('src/modules/budget/pages/SalaryDivisionPage'),
       },
     ],
   },

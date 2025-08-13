@@ -1,6 +1,8 @@
 @import 'tailwindcss' important;
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
 
-@theme {
+@theme inline {
     --color-go-blue: #0EA5E9;         /* Azul EA FC principal */
     --color-go-cyan: #06B6D4;         /* Cyan vibrante */
     --color-go-purple: #8B5CF6;      /* Púrpura premium */
@@ -127,6 +129,19 @@
     --breakpoint-2xl: 1536px;
 }
 
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+    html {
+        @apply scroll-smooth;
+    }
+    body {
+        @apply bg-background text-foreground min-h-screen;
+    }
+}
+
+
 @media (prefers-color-scheme: dark) {
     @theme {
         --color-bg-primary: oklch(0.15 0.02 240);     /* Más claro que antes */
@@ -213,4 +228,14 @@
         );
         pointer-events: none;
     }
+}
+
+html {
+    color-scheme: light dark;
+}
+html.dark {
+    color-scheme: dark;
+}
+html.light {
+    color-scheme: light;
 }

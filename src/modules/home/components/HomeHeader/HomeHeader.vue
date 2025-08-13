@@ -1,6 +1,6 @@
 <template>
   <q-header class="bg-bg-primary/95 backdrop-blur-md border-b border-go-blue/30">
-    <div class="container mx-auto py-4">
+    <div class="container mx-auto py-2">
       <q-toolbar>
         <q-toolbar-title class="flex items-center md:justify-center gap-2">
           <q-avatar>
@@ -17,7 +17,7 @@
         <q-btn flat round icon="fa fa-bars" class="block md:hidden" @click="$emit('open-menu')" />
       </q-toolbar>
 
-      <q-toolbar inset class="hidden md:flex justify-center mt-4">
+      <q-toolbar inset class="hidden md:flex justify-center mt-2">
         <q-tabs
           v-model="activeTab"
           dense
