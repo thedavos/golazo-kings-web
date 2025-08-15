@@ -2,8 +2,7 @@ import {
   PlayerPosition,
   PlayerPositionAbbreviation,
 } from 'src/modules/players/domain/value-objects/player-position.enum';
-
-import type { FormationConfigurationType } from './types';
+import type { BenchSlotList, FormationConfigurationType } from './types';
 
 export const FORMATION_CONFIGURATION: FormationConfigurationType = {
   '4-2-0': [
@@ -351,4 +350,12 @@ export const FORMATION_OPTIONS = [
     description: 'Máxima ofensiva',
     players: '7 jugadores',
   },
+];
+
+export const BENCH_SLOTS: BenchSlotList = [
+  { id: 'bench1', label: 'Suplente 1' },
+  { id: 'bench2', label: 'Suplente 2' },
+  { id: 'bench3', label: 'Suplente 3' },
+  { id: 'bench4', label: 'Suplente 4' },
+  { id: 'bench5', label: 'Suplente 5' },
 ];

@@ -4,6 +4,7 @@
     :style="{ left: `${fieldPosition.x}%`, top: `${fieldPosition.y}%` }"
     @dragover.prevent
     @drop="handleDrop"
+    @click="handleAdd"
   >
     <!-- Player assigned to position -->
     <div
@@ -22,9 +23,9 @@
     <div
       v-else
       :style="{ width: `${positionDimension}px`, height: `${positionDimension}px` }"
-      class="rounded-full border-2 border-dashed border-white/50 flex items-center justify-center bg-black/10 hover:bg-primary transition-colors"
+      class="rounded-full border-2 border-dashed border-white/50 flex items-center justify-center bg-black/10 hover:bg-primary transition-colors ease-in"
     >
-      <span class="text-xs font-bold text-white">{{ fieldPosition.abbreviation }}</span>
+      <q-icon class="text-white" name="fas fa-plus" size="sm" />
     </div>
   </div>
 </template>
@@ -44,12 +45,17 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const emit = defineEmits(['drop', 'remove']);
+const emit = defineEmits(['drop', 'remove', 'add']);
 
 const playerInitials = computed(() => getInitials(props.player.firstName, props.player.lastName));
 
 const handleDrop = (e: Event) => {
   e.preventDefault();
   emit('drop', props.fieldPosition.id, props.fieldPosition.position);
+};
+
+const handleAdd = (e: Event) => {
+  e.preventDefault();
+  emit('add', props.fieldPosition.id, props.fieldPosition.position);
 };
 </script>

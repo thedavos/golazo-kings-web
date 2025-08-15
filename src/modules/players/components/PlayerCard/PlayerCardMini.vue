@@ -28,7 +28,7 @@
     </div>
 
     <!-- Player Price -->
-    <div class="text-xs text-yellow-400 font-semibold">€{{ playerPrice }}</div>
+    <div class="text-xs text-yellow-400 font-semibold">{{ playerPrice }}</div>
   </div>
 </template>
 
@@ -38,11 +38,12 @@ import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 
 interface Props {
   player: PlayerDto;
+  formatter: (amount: number) => string;
 }
 
 const props = defineProps<Props>();
 
 defineEmits(['dragStart']);
 
-const playerPrice = computed(() => props.player.marketValue?.toLocaleString() || '100');
+const playerPrice = computed(() => props.formatter(props.player.marketValue || 100));
 </script>

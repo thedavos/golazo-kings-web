@@ -7,8 +7,13 @@
 
     <div class="space-y-3">
       <div class="flex justify-between">
+        <span class="text-gray-400">Presupuesto Total</span>
+        <span class="text-white font-semibold">{{ formatter(budgetAmount) }}</span>
+      </div>
+
+      <div class="flex justify-between">
         <span class="text-gray-400">Gastado</span>
-        <span class="text-white font-semibold">€{{ totalCost.toLocaleString() }}</span>
+        <span class="text-white font-semibold">{{ formatter(totalCost) }}</span>
       </div>
 
       <div class="flex justify-between">
@@ -17,7 +22,7 @@
           :class="remainingBudget < 0 ? 'text-red-400' : 'text-yellow-400'"
           class="font-semibold"
         >
-          €{{ remainingBudget.toLocaleString() }}
+          {{ formatter(remainingBudget) }}
         </span>
       </div>
 
@@ -26,27 +31,28 @@
         <div
           :class="remainingBudget < 0 ? 'bg-red-500' : 'bg-gradient-to-r from-blue-500 to-blue-600'"
           class="h-3 rounded-full transition-all duration-300"
-          :style="{ width: `${Math.min((totalCost / 4000) * 100, 100)}%` }"
+          :style="{ width: `${Math.min((totalCost / budgetAmount) * 100, 100)}%` }"
         />
       </div>
 
       <div class="flex justify-between text-sm">
-        <span class="text-gray-400">€0</span>
-        <span class="text-gray-400">€4000</span>
+        <span class="text-gray-400">{{ currencyOption.symbol }}0</span>
+        <span class="text-gray-400">{{ formatter(budgetAmount) }}</span>
       </div>
     </div>
   </q-card>
 </template>
 
 <script setup lang="ts">
-defineProps({
-  totalCost: {
-    type: Number,
-    required: true,
-  },
-  remainingBudget: {
-    type: Number,
-    required: true,
-  },
-});
+import type { CurrencyOption } from 'src/modules/home/components/HomeDemoBuilder';
+
+interface Props {
+  totalCost: number;
+  remainingBudget: number;
+  budgetAmount: number;
+  currencyOption: CurrencyOption;
+  formatter: (amount: number) => string;
+}
+
+defineProps<Props>();
 </script>

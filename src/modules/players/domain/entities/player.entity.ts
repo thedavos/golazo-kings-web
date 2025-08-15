@@ -33,6 +33,7 @@ export class Player {
   formerTeam?: string | null;
   referenceId?: number | null;
   referenceUrl?: string | null;
+  rating?: number | null;
   teamId: number;
   teamUuid: string;
   team?: Team;
@@ -53,6 +54,7 @@ export class Player {
     this.isWildCard = data.isWildCard ?? false;
     this.referenceId = data.referenceId || null;
     this.referenceUrl = data.referenceUrl || null;
+    this.rating = data.rating || null;
     this.teamId = data.teamId || 0;
     this.teamUuid = data.teamUuid || '';
     this.seasonStats = data.seasonStats || [];

@@ -1,1 +1,1 @@
-export { default } from './LineupPositionMini.vue';
+export { default as LineupPositionMini } from './LineupPositionMini.vue';

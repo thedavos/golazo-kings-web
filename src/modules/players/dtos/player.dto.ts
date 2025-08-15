@@ -30,6 +30,7 @@ export interface PlayerDto {
   formerTeam?: string | undefined | null;
   referenceId?: number | undefined | null;
   referenceUrl?: string | undefined | null;
+  rating?: number | undefined | null;
   team?: string;
   teamId: number;
   teamUuid: string;

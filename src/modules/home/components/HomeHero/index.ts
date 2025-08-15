@@ -1,1 +1,1 @@
-export { default } from './HomeHero.vue';
+export { default as HomeHero } from './HomeHero.vue';

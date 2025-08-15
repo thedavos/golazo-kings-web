@@ -8,3 +8,14 @@ export interface LeagueOption {
 }
 
 export type LeagueOptionList = LeagueOption[];
+
+export interface CurrencyOption {
+  label: string;
+  value: string;
+  code: string;
+  symbol: string;
+  mask: string;
+  formatter: (amount: number) => string;
+}
+
+export type CurrencyOptionList = CurrencyOption[];
