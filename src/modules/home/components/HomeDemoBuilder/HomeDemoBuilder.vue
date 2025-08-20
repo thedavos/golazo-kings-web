@@ -10,28 +10,7 @@
         </p>
       </div>
 
-      <div class="grid lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-        <!-- Football Field -->
-        <div class="lg:col-span-2">
-          <q-card class="bg-slate-800/50 border border-blue-500/20 backdrop-blur-sm p-6 h-fit">
-            <demo-field
-              :lineup="lineup"
-              :field-positions="currentFieldPositions"
-              :selected-league="selectedLeague"
-              :demo-players="demoPlayers"
-              :bench="bench"
-              :selected-slot="selectedSlotId"
-              @remove-player="removePlayer"
-              @remove-bench-player="removeBenchPlayer"
-              @swap-players="handleSwapPlayers"
-              @auto-fill-bench="handleAutoFillBench"
-              @clear-bench="handleClearBench"
-              @click-field-slot="openPlayerSelection"
-              @click-bench-slot="openBenchSelection"
-            />
-          </q-card>
-        </div>
-
+      <div class="grid lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
         <!-- Budget & Stats -->
         <div class="lg:col-span-1 space-y-4">
           <q-card class="bg-slate-800/50 border border-blue-500/20 backdrop-blur-sm p-6">
@@ -240,6 +219,33 @@
             Reiniciar
           </q-btn>
         </div>
+
+        <!-- Football Field -->
+        <div class="lg:col-span-2">
+          <q-card class="bg-slate-800/50 border border-blue-500/20 backdrop-blur-sm p-6 h-fit">
+            <demo-field
+              :lineup="lineup"
+              :field-positions="currentFieldPositions"
+              :selected-league="selectedLeague"
+              :demo-players="demoPlayers"
+              :bench="bench"
+              :selected-slot="selectedSlotId"
+              :formatter="currentCurrency.formatter"
+              @remove-player="removePlayer"
+              @remove-bench-player="removeBenchPlayer"
+              @swap-players="handleSwapPlayers"
+              @auto-fill-bench="handleAutoFillBench"
+              @clear-bench="handleClearBench"
+              @click-field-slot="openPlayerSelection"
+              @click-bench-slot="openBenchSelection"
+              @deselect-field-slot="deselectField('field')"
+              @deselect-bench-slot="deselectField('bench')"
+              @drop-field-player="onDropFieldPlayer"
+              @drop-bench-player="onDropBenchPlayer"
+              @update:salary="onPlayerSalaryUpdate"
+            />
+          </q-card>
+        </div>
       </div>
     </div>
   </section>
@@ -283,11 +289,14 @@ const props = defineProps<Props>();
 const {
   lineup,
   bench,
+  draggedPlayer,
   remainingBudget,
   budgetAmount,
   displayFace,
   totalCost,
   selectedSlotId,
+  selectedSlotType,
+  selectedSlotPosition,
   selectedCurrency,
   currentCurrency,
   selectedLeagueValue,
@@ -296,6 +305,10 @@ const {
   currentFieldPositions,
   resetBench,
   resetLineup,
+  updatePlayerMarketValue,
+  resetSelectedSlot,
+  selectPlayer,
+  canSelectPlayer,
 } = useSharedDemoBuilder();
 
 const { clearEngine, clearSearch, refreshCache, initializeSearch } = useSharedPlayerSearch();
@@ -328,6 +341,38 @@ const openBenchSelection = (slotId: string) => {
 };
 
 // Methods
+const onDropPlayer = (
+  slotId: string,
+  slotType: 'field' | 'bench',
+  position: PlayerPositionAbbreviation,
+) => {
+  if (draggedPlayer.value) {
+    if (canSelectPlayer(draggedPlayer.value, position)) {
+      selectedSlotId.value = slotId;
+      selectedSlotType.value = slotType;
+      selectedSlotPosition.value = position;
+    }
+    selectPlayer(draggedPlayer.value, position);
+    draggedPlayer.value = null;
+  }
+};
+
+const onDropBenchPlayer = (slotId: string, position: PlayerPositionAbbreviation) => {
+  onDropPlayer(slotId, 'bench', position);
+};
+
+const onDropFieldPlayer = (slotId: string, position: PlayerPositionAbbreviation) => {
+  onDropPlayer(slotId, 'field', position);
+};
+
+const deselectField = (slotType: 'field' | 'bench' = 'field') => {
+  resetSelectedSlot(slotType);
+};
+
+const onPlayerSalaryUpdate = (slotId: string, slotType: 'field' | 'bench', salary: number) => {
+  updatePlayerMarketValue(slotId, slotType, salary || 0);
+};
+
 const removePlayer = (positionId: string) => {
   emit('remove:player', positionId);
 };

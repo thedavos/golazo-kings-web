@@ -32,8 +32,12 @@
         :player="lineup[pos.id]"
         :is-kings="isKings"
         :selected="pos.id === selectedSlot"
+        :formatter="formatter"
         @remove="handleRemove"
         @add="handleFieldSlotClick"
+        @deselect="handleFieldDeselect"
+        @drop="handleFieldDrop"
+        @update:salary="emit('update:salary', pos.id, 'field', $event)"
       />
     </div>
 
@@ -48,7 +52,7 @@
         />
       </div>
 
-      <div class="grid grid-cols-4 gap-4">
+      <div class="grid grid-cols-5 gap-4">
         <lineup-bench-slot
           v-for="(slot, index) in benchSlots"
           :key="`bench-${index}`"
@@ -60,10 +64,13 @@
           :is-kings="isKings"
           :selected="slot.id === selectedSlot"
           :position-dimension="positionDimension"
-          @drop="handleBenchDrop"
+          :formatter="formatter"
           @remove="handleBenchRemove"
           @swap-to-field="handleSwapToField"
           @add="handleBenchSlotClick"
+          @drop="handleBenchDrop"
+          @deselect="handleBenchDeselect"
+          @update:salary="emit('update:salary', slot.id, 'bench', $event)"
         />
       </div>
 
@@ -144,6 +151,7 @@ interface Props {
   selectedLeague: LeagueOption;
   demoPlayers: PlayerDto[];
   selectedSlot: string | null;
+  formatter: (value: number) => string;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -160,6 +168,10 @@ const emit = defineEmits([
   'clearBench',
   'clickFieldSlot',
   'clickBenchSlot',
+  'deselectFieldSlot',
+  'deselectBenchSlot',
+  'dropFieldPlayer',
+  'update:salary',
 ]);
 
 const field = useTemplateRef('field');
@@ -217,8 +229,24 @@ const positionDimension = computed<number>(() => {
 });
 
 // Methods
-const handleFieldSlotClick = (slotId: string, position: PlayerPositionAbbreviation) => {
-  emit('clickFieldSlot', slotId, position);
+const handleFieldDrop = (positionId: string, position: PlayerPositionAbbreviation) => {
+  emit('dropFieldPlayer', positionId, position);
+};
+
+const handleBenchDrop = (slotId: string) => {
+  emit('dropBenchPlayer', slotId);
+};
+
+const handleFieldDeselect = (positionId: string) => {
+  emit('deselectFieldSlot', positionId);
+};
+
+const handleBenchDeselect = (slotId: string) => {
+  emit('deselectBenchSlot', slotId);
+};
+
+const handleFieldSlotClick = (positionId: string, position: PlayerPositionAbbreviation) => {
+  emit('clickFieldSlot', positionId, position);
 };
 
 const handleBenchSlotClick = (slotId: string) => {
@@ -227,10 +255,6 @@ const handleBenchSlotClick = (slotId: string) => {
 
 const handleRemove = (positionId: string) => {
   emit('removePlayer', positionId);
-};
-
-const handleBenchDrop = (slotId: string) => {
-  emit('dropBenchPlayer', slotId);
 };
 
 const handleBenchRemove = (slotId: string) => {

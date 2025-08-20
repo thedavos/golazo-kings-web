@@ -6,6 +6,7 @@
       :key="player.id"
       :player="player"
       @click="selectPlayer(player)"
+      @drag-start="handleDragStart(player)"
     />
   </div>
 </template>
@@ -20,9 +21,13 @@ interface Props {
 
 defineProps<Props>();
 
-const emit = defineEmits(['select-player']);
+const emit = defineEmits(['select-player', 'drag-start']);
 
 const selectPlayer = (player: PlayerDto) => {
   emit('select-player', player);
+};
+
+const handleDragStart = (player: PlayerDto) => {
+  emit('drag-start', player);
 };
 </script>

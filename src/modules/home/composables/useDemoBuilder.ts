@@ -1,5 +1,6 @@
 import { computed, ref } from 'vue';
 import { createSharedComposable } from '@vueuse/core';
+import { useQuasar } from 'quasar';
 import {
   CURRENCY_OPTION_DEFAULT as currencyOptionDefault,
   CURRENCY_OPTIONS as currencyOptions,
@@ -26,6 +27,9 @@ function useDemoBuilder() {
   const selectedSlotPosition = ref<PlayerPositionAbbreviation | null>(null);
   const selectedSlotType = ref<'field' | 'bench'>('field');
   const displayFace = ref(false);
+  const draggedPlayer = ref<PlayerDto | null>(null);
+
+  const $q = useQuasar();
 
   const demoPlayers = computed(() => {
     if (selectedLeague.value.type === 'kings') {
@@ -43,6 +47,13 @@ function useDemoBuilder() {
     return queensPlayers.filter((player) =>
       selectedLeague.value.value === 'queens' ? true : player.league === selectedLeague.value.label,
     );
+  });
+
+  const allSelectedPlayers = computed(() => {
+    return [
+      ...Object.values(lineup.value).filter(Boolean),
+      ...Object.values(bench.value).filter(Boolean),
+    ];
   });
 
   const currentFieldPositions = computed(() => {
@@ -77,6 +88,12 @@ function useDemoBuilder() {
     return lineupCost + benchCost;
   });
 
+  const resetSelectedSlot = (slotType: 'field' | 'bench' = 'field') => {
+    selectedSlotId.value = null;
+    selectedSlotPosition.value = null;
+    selectedSlotType.value = slotType;
+  };
+
   const updateLineup = (positionId: string, draggedPlayer: PlayerDto) => {
     lineup.value = { ...lineup.value, [positionId]: draggedPlayer };
   };
@@ -101,6 +118,82 @@ function useDemoBuilder() {
     bench.value = {};
   };
 
+  const updateLineupPlayerProperty = <K extends keyof PlayerDto>(
+    positionId: string,
+    property: K,
+    value: PlayerDto[K],
+  ) => {
+    if (lineup.value[positionId]) {
+      const currentPlayer = lineup.value[positionId];
+      const updatedPlayer = { ...currentPlayer, [property]: value };
+
+      lineup.value = {
+        ...lineup.value,
+        [positionId]: updatedPlayer,
+      };
+    }
+  };
+
+  const updateBenchPlayerProperty = <K extends keyof PlayerDto>(
+    slotId: string,
+    property: K,
+    value: PlayerDto[K],
+  ) => {
+    if (bench.value[slotId]) {
+      const currentPlayer = bench.value[slotId];
+      const updatedPlayer = { ...currentPlayer, [property]: value };
+
+      bench.value = {
+        ...bench.value,
+        [slotId]: updatedPlayer,
+      };
+    }
+  };
+
+  const updateLineupPlayerProperties = (positionId: string, properties: Partial<PlayerDto>) => {
+    if (lineup.value[positionId]) {
+      const currentPlayer = lineup.value[positionId];
+      const updatedPlayer = { ...currentPlayer, ...properties };
+
+      lineup.value = {
+        ...lineup.value,
+        [positionId]: updatedPlayer,
+      };
+    }
+  };
+
+  const updateBenchPlayerProperties = (slotId: string, properties: Partial<PlayerDto>) => {
+    if (bench.value[slotId]) {
+      const currentPlayer = bench.value[slotId];
+      const updatedPlayer = { ...currentPlayer, ...properties };
+
+      bench.value = {
+        ...bench.value,
+        [slotId]: updatedPlayer,
+      };
+    }
+  };
+
+  const getLineupPlayer = (positionId: string): PlayerDto | undefined => {
+    return lineup.value[positionId];
+  };
+
+  const getBenchPlayer = (slotId: string): PlayerDto | undefined => {
+    return bench.value[slotId];
+  };
+
+  const updatePlayerMarketValue = (
+    slotId: string,
+    slotType: 'field' | 'bench',
+    marketValue: number,
+  ) => {
+    if (slotType === 'field') {
+      updateLineupPlayerProperty(slotId, 'marketValue', marketValue);
+    } else {
+      updateBenchPlayerProperty(slotId, 'marketValue', marketValue);
+    }
+  };
+
   const onPlayerSelected = (player: PlayerDto) => {
     if (!selectedSlotId.value) return;
 
@@ -116,10 +209,60 @@ function useDemoBuilder() {
     selectedSlotPosition.value = null;
   };
 
+  const canSelectPlayer = (
+    player: PlayerDto,
+    requiredPosition: PlayerPositionAbbreviation,
+  ): boolean => {
+    // Check if a player is already selected
+    const isAlreadySelected = allSelectedPlayers.value.some((p) => p.id === player.id);
+    if (isAlreadySelected) return false;
+
+    // Check budget
+    const exceedsBudget = (player.marketValue || 0) > remainingBudget.value;
+    if (exceedsBudget) return false;
+
+    // Check position compatibility (if required)
+    return !(requiredPosition && player.positionAbbreviation !== requiredPosition);
+  };
+
+  const selectPlayer = (player: PlayerDto, requiredPosition: PlayerPositionAbbreviation) => {
+    if (!canSelectPlayer(player, requiredPosition))
+      return $q.notify({
+        message: getPlayerAlert(player, requiredPosition),
+        position: 'bottom-left',
+        color: 'primary',
+        timeout: 2500,
+      });
+
+    onPlayerSelected(player);
+  };
+
+  const getPlayerAlert = (
+    player: PlayerDto,
+    requiredPosition: PlayerPositionAbbreviation,
+  ): string => {
+    const isAlreadySelected = allSelectedPlayers.value.some((p) => p.id === player.id);
+    if (isAlreadySelected)
+      return player.isQueensLeaguePlayer
+        ? 'La jugadora ya está seleccionada'
+        : 'El jugador ya está seleccionado';
+
+    const exceedsBudget = (player.marketValue || 0) > remainingBudget.value;
+    if (exceedsBudget)
+      return `Te quedaste sin presupuesto para armar tu equipo, ajusta o descarta a ${player.isQueensLeaguePlayer ? 'alguna jugadora' : 'algún jugador'}`;
+
+    if (requiredPosition && player.positionAbbreviation !== requiredPosition) {
+      return `Posición incorrecta para ${player.isQueensLeaguePlayer ? 'la jugadora' : 'el jugador'}`;
+    }
+
+    return 'Disponible';
+  };
+
   return {
     demoPlayers,
     lineup,
     bench,
+    draggedPlayer,
     selectedCurrency,
     budgetAmount,
     remainingBudget,
@@ -137,6 +280,7 @@ function useDemoBuilder() {
     currentFieldPositions,
 
     //   Methods
+    resetSelectedSlot,
     updateLineup,
     updateBench,
     replaceLineup,
@@ -144,6 +288,16 @@ function useDemoBuilder() {
     resetLineup,
     resetBench,
     onPlayerSelected,
+    updateLineupPlayerProperty,
+    updateBenchPlayerProperty,
+    updateLineupPlayerProperties,
+    updateBenchPlayerProperties,
+    updatePlayerMarketValue,
+    getLineupPlayer,
+    getBenchPlayer,
+    selectPlayer,
+    canSelectPlayer,
+    getPlayerAlert,
   };
 }
 

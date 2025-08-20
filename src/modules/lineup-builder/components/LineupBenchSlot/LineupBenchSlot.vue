@@ -1,12 +1,12 @@
 <template>
   <div
     :class="[
-      'relative  rounded-lg border-2 border-slate-500/50 hover:border-purple-400/50 transition-all duration-200 min-h-[80px] flex flex-col items-center justify-center p-2 cursor-pointer',
+      'relative rounded-lg border-2 border-slate-500/50 transition-all duration-200 min-h-[80px] flex flex-col items-center justify-center p-2 cursor-pointer',
       player || selected ? 'border-solid bg-gray-900' : 'border-dashed bg-gray-800',
     ]"
     @dragover.prevent
     @drop="handleDrop"
-    @click="handleAdd"
+    @click="handleClick"
   >
     <q-menu
       v-if="player"
@@ -16,21 +16,21 @@
       :offset="[5, 0]"
     >
       <q-list bordered dense separator>
-        <q-item clickable>
-          <q-item-section>Ver jugador</q-item-section>
-        </q-item>
-        <q-item clickable>
-          <q-item-section>Mover jugador</q-item-section>
-        </q-item>
+        <!--        <q-item clickable>-->
+        <!--          <q-item-section>Ver jugador</q-item-section>-->
+        <!--        </q-item>-->
+        <!--        <q-item clickable>-->
+        <!--          <q-item-section>Mover jugador</q-item-section>-->
+        <!--        </q-item>-->
         <q-item clickable @click="showSwapDialog = true">
           <q-item-section>Intercambiar jugador</q-item-section>
         </q-item>
-        <q-item clickable>
+        <q-item clickable @click="showSalaryDialog = true">
           <q-item-section>Editar salario</q-item-section>
         </q-item>
-        <q-item clickable>
-          <q-item-section>Editar rating</q-item-section>
-        </q-item>
+        <!--        <q-item clickable>-->
+        <!--          <q-item-section>Editar rating</q-item-section>-->
+        <!--        </q-item>-->
         <q-item clickable @click="handleRemove">
           <q-item-section>Quitar jugador</q-item-section>
         </q-item>
@@ -46,14 +46,20 @@
           isKings ? 'from-yellow-300 to-yellow-600' : 'from-blue-300 to-blue-600',
         ]"
       >
-        <span class="text-xs font-bold text-white">{{ playerInitials }}</span>
+        <span class="text-xs font-bold text-white">{{ player.positionAbbreviation }}</span>
+      </div>
+
+      <div
+        v-if="player.marketValue"
+        class="absolute text-[8px] pl-1 pt-0.5 font-bold text-yellow-400 top-0 left-0"
+      >
+        {{ formatter(player.marketValue) }}
       </div>
 
       <div class="text-center mt-1">
         <div class="text-xs font-medium text-white truncate">
-          {{ player.firstName }} {{ player.lastName }}
+          {{ displayName }}
         </div>
-        <div class="text-xs text-gray-400">{{ player.position }}</div>
       </div>
     </div>
 
@@ -68,8 +74,15 @@
       <div class="text-xs text-slate-400 mt-1">{{ benchSlot.label }}</div>
     </div>
 
+    <player-edit-salary-dialog
+      v-model="showSalaryDialog"
+      :player="player"
+      :formatter="formatter"
+      @update:salary="emit('update:salary', $event)"
+    />
+
     <!-- Swap Dialog -->
-    <q-dialog v-if="player" v-model="showSwapDialog">
+    <q-dialog v-if="player" v-model="showSwapDialog" seamless>
       <q-card class="bg-slate-800 text-white min-w-[300px]">
         <q-card-section class="pb-2">
           <div class="text-h6 flex items-center gap-2">
@@ -103,7 +116,7 @@
         </q-card-section>
 
         <q-card-actions align="right">
-          <q-btn flat label="Cancelar" @click="showSwapDialog = false" />
+          <q-btn flat label="Cerrar" @click="showSwapDialog = false" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -112,7 +125,7 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { getInitials } from 'src/modules/shared/utils/initials.util';
+import { PlayerEditSalaryDialog } from 'src/modules/players/dialogs/PlayerEditSalaryDialog';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 import type { BenchSlot, FieldPositions } from 'src/modules/lineup-builder/components/LineupField';
 import type { LeagueOption } from 'src/modules/home/components/HomeDemoBuilder';
@@ -126,24 +139,26 @@ interface Props {
   isKings: boolean;
   selected: boolean;
   positionDimension: number;
+  formatter: (value: number) => string;
 }
 
 const props = defineProps<Props>();
 
-const emit = defineEmits(['drop', 'remove', 'swap-to-field', 'add']);
+const emit = defineEmits(['drop', 'remove', 'swap-to-field', 'add', 'deselect', 'update:salary']);
 
 const showSwapDialog = ref(false);
+const showSalaryDialog = ref(false);
 
 // Computed
 const availableFieldPositions = computed(() => {
   return props.fieldPositions || [];
 });
 
-const playerInitials = computed(() =>
-  props.player?.firstName ? getInitials(props.player.firstName, props.player.lastName) : 'KL',
+const fullName = computed(() => `${props.player?.firstName} ${props.player?.lastName}`);
+const displayName = computed(() =>
+  fullName.value.length >= 14 ? props.player?.lastName : fullName.value,
 );
 
-// Methods
 const handleDrop = (e: Event) => {
   e.preventDefault();
   emit('drop', props.benchSlot.id);
@@ -158,8 +173,13 @@ const handleSwap = (fieldPositionId: string) => {
   showSwapDialog.value = false;
 };
 
-const handleAdd = (e: Event) => {
+const handleClick = (e: Event) => {
   if (props.player) return;
+  if (props.selected) {
+    emit('deselect', props.benchSlot.id);
+    return;
+  }
+
   e.preventDefault();
   emit('add', props.benchSlot.id);
 };

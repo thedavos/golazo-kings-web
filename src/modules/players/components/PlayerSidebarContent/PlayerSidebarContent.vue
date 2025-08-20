@@ -35,7 +35,8 @@
         v-if="searchResults.length > 0"
         class="mt-2"
         :players="searchResults"
-        @select-player="selectPlayer"
+        @select-player="handlePlayerSelection"
+        @drag-start="handleDragStart"
       />
 
       <!-- No Results Message -->
@@ -61,8 +62,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
-import { useQuasar } from 'quasar';
 import { useSharedPlayerSearch } from 'src/modules/players/composables/usePlayerSearch';
 import { useSharedDemoBuilder } from 'src/modules/home/composables/useDemoBuilder';
 import { PlayerSearch } from 'src/modules/players/components/PlayerSearch';
@@ -72,15 +71,11 @@ import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 
 const emit = defineEmits(['close-sidebar']);
 
-const $q = useQuasar();
-
 const {
   demoPlayers,
-  lineup,
-  bench,
-  remainingBudget,
-  onPlayerSelected,
+  draggedPlayer,
   selectedSlotPosition: requiredPosition,
+  selectPlayer,
 } = useSharedDemoBuilder();
 
 const {
@@ -94,36 +89,12 @@ const {
   clearSearch,
 } = useSharedPlayerSearch();
 
-const allSelectedPlayers = computed(() => {
-  return [
-    ...Object.values(lineup.value).filter(Boolean),
-    ...Object.values(bench.value).filter(Boolean),
-  ];
-});
-
-const canSelectPlayer = (player: PlayerDto): boolean => {
-  // Check if a player is already selected
-  const isAlreadySelected = allSelectedPlayers.value.some((p) => p.id === player.id);
-  if (isAlreadySelected) return false;
-
-  // Check budget
-  const exceedsBudget = (player.marketValue || 0) > remainingBudget.value;
-  if (exceedsBudget) return false;
-
-  // Check position compatibility (if required)
-  return !(requiredPosition.value && player.positionAbbreviation !== requiredPosition.value);
+const handlePlayerSelection = (player: PlayerDto) => {
+  selectPlayer(player, requiredPosition.value!);
 };
 
-const selectPlayer = (player: PlayerDto) => {
-  if (!canSelectPlayer(player))
-    return $q.notify({
-      message: getPlayerAlert(player),
-      position: 'bottom-left',
-      color: 'primary',
-      timeout: 2500,
-    });
-
-  onPlayerSelected(player);
+const handleDragStart = (player: PlayerDto) => {
+  draggedPlayer.value = player;
 };
 
 const closeSidebar = () => {
@@ -134,23 +105,5 @@ const closeSidebar = () => {
 const selectSuggestion = async (suggestion: string) => {
   searchQuery.value = suggestion;
   await instantSearch(suggestion);
-};
-
-const getPlayerAlert = (player: PlayerDto): string => {
-  const isAlreadySelected = allSelectedPlayers.value.some((p) => p.id === player.id);
-  if (isAlreadySelected)
-    return player.isQueensLeaguePlayer
-      ? 'La jugadora ya está seleccionada'
-      : 'El jugador ya está seleccionado';
-
-  const exceedsBudget = (player.marketValue || 0) > remainingBudget.value;
-  if (exceedsBudget)
-    return `Te quedaste sin presupuesto para armar tu equipo, ajusta o descarta a ${player.isQueensLeaguePlayer ? 'alguna jugadora' : 'algún jugador'}`;
-
-  if (requiredPosition.value && player.positionAbbreviation !== requiredPosition.value) {
-    return `Posición incorrecta para ${player.isQueensLeaguePlayer ? 'la jugadora' : 'el jugador'}`;
-  }
-
-  return 'Disponible';
 };
 </script>

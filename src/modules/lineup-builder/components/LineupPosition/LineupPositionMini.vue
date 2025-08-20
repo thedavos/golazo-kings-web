@@ -7,7 +7,7 @@
     :style="{ left: `${fieldPosition.x}%`, top: `${fieldPosition.y}%` }"
     @dragover.prevent
     @drop="handleDrop"
-    @click="addPlayer"
+    @click="handleClick"
   >
     <q-menu
       v-if="player"
@@ -17,18 +17,18 @@
       :offset="[5, 0]"
     >
       <q-list bordered dense separator>
-        <q-item clickable>
-          <q-item-section>Ver jugador</q-item-section>
-        </q-item>
-        <q-item clickable>
-          <q-item-section>Mover jugador</q-item-section>
-        </q-item>
-        <q-item clickable>
+        <!--        <q-item clickable>-->
+        <!--          <q-item-section>Ver jugador</q-item-section>-->
+        <!--        </q-item>-->
+        <!--        <q-item clickable>-->
+        <!--          <q-item-section>Mover jugador</q-item-section>-->
+        <!--        </q-item>-->
+        <q-item clickable @click="showSalaryDialog = true">
           <q-item-section>Editar salario</q-item-section>
         </q-item>
-        <q-item clickable>
-          <q-item-section>Editar rating</q-item-section>
-        </q-item>
+        <!--        <q-item clickable>-->
+        <!--          <q-item-section>Editar rating</q-item-section>-->
+        <!--        </q-item>-->
         <q-item clickable @click="removePlayer">
           <q-item-section>Quitar jugador</q-item-section>
         </q-item>
@@ -50,6 +50,13 @@
         <span class="text-xs font-bold text-white">{{ player.positionAbbreviation }}</span>
       </div>
 
+      <div
+        v-if="player.marketValue"
+        class="absolute text-[8px] pl-1 pt-0.5 font-bold text-yellow-400 top-0 left-0"
+      >
+        {{ formatter(player.marketValue) }}
+      </div>
+
       <div class="text-center mt-1">
         <div class="text-xs font-medium text-white truncate">
           {{ displayName }}
@@ -69,11 +76,19 @@
         {{ fieldPosition.abbreviation }}
       </p>
     </div>
+
+    <player-edit-salary-dialog
+      v-model="showSalaryDialog"
+      :player="player"
+      :formatter="formatter"
+      @update:salary="emit('update:salary', $event)"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import { PlayerEditSalaryDialog } from 'src/modules/players/dialogs/PlayerEditSalaryDialog';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 import type { FieldPosition } from 'src/modules/lineup-builder/components/LineupField';
 
@@ -83,11 +98,14 @@ interface Props {
   player: PlayerDto | undefined;
   isKings: boolean;
   selected: boolean;
+  formatter: (value: number) => string;
 }
 
 const props = defineProps<Props>();
 
-const emit = defineEmits(['drop', 'remove', 'add']);
+const emit = defineEmits(['drop', 'remove', 'add', 'deselect', 'update:salary']);
+
+const showSalaryDialog = ref(false);
 
 const fullName = computed(() => `${props.player?.firstName} ${props.player?.lastName}`);
 const displayName = computed(() =>
@@ -96,12 +114,17 @@ const displayName = computed(() =>
 
 const handleDrop = (e: Event) => {
   e.preventDefault();
-  // emit('drop', props.fieldPosition.id, props.fieldPosition.position);
+  emit('drop', props.fieldPosition.id, props.fieldPosition.abbreviation);
 };
 
-const addPlayer = (e: Event) => {
-  if (props.player) return;
+const handleClick = (e: Event) => {
   e.preventDefault();
+  if (props.player) return;
+  if (props.selected) {
+    emit('deselect', props.fieldPosition.id);
+    return;
+  }
+
   emit('add', props.fieldPosition.id, props.fieldPosition.abbreviation);
 };
 
