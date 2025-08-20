@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="relative h-96 rounded-xl bg-gradient-to-b">
+    <div class="h-96 md:h-[500px] relative rounded-xl bg-gradient-to-b">
       <!-- Field markings -->
       <div
         ref="field"
@@ -24,14 +24,14 @@
       </div>
 
       <!-- Player positions -->
-      <LineupPositionMini
+      <lineup-position-mini
         v-for="pos in fieldPositions"
         :key="pos.id"
         :field-position="pos"
         :position-dimension="positionDimension"
-        :player="getFieldPosition(pos)"
+        :player="lineup[pos.id]"
         :is-kings="isKings"
-        @drop="handleDrop"
+        :selected="pos.id === selectedSlot"
         @remove="handleRemove"
         @add="handleFieldSlotClick"
       />
@@ -53,11 +53,12 @@
           v-for="(slot, index) in benchSlots"
           :key="`bench-${index}`"
           :bench-slot="slot"
-          :player="bench[slot.id]!"
+          :player="bench[slot.id]"
           :selected-league="selectedLeague"
           :field-positions="fieldPositions"
           :field-player="lineup"
           :is-kings="isKings"
+          :selected="slot.id === selectedSlot"
           :position-dimension="positionDimension"
           @drop="handleBenchDrop"
           @remove="handleBenchRemove"
@@ -133,12 +134,8 @@ import { LEAGUE_OPTION_DEFAULT as leagueOptionDefault } from 'src/modules/home/c
 import { PlayerPositionAbbreviation } from 'src/modules/players/domain/value-objects/player-position.enum';
 import { BENCH_SLOTS as benchSlots } from './constants';
 import type { LeagueOption } from 'src/modules/home/components/HomeDemoBuilder';
-import type {
-  FieldPosition,
-  FieldPositions,
-} from 'src/modules/lineup-builder/components/LineupField';
+import type { FieldPositions } from 'src/modules/lineup-builder/components/LineupField';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
-import type { PlayerPosition } from 'src/modules/players/domain/value-objects/player-position.enum';
 
 interface Props {
   lineup: Record<string, PlayerDto>;
@@ -146,6 +143,7 @@ interface Props {
   fieldPositions: FieldPositions;
   selectedLeague: LeagueOption;
   demoPlayers: PlayerDto[];
+  selectedSlot: string | null;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -218,21 +216,13 @@ const positionDimension = computed<number>(() => {
   return Math.max(MIN_POSITION_WIDTH, Math.min(calculatedWidth, MAX_POSITION_WIDTH));
 });
 
-const getFieldPosition = (position: FieldPosition) => {
-  return props.lineup[position.id] as PlayerDto;
-};
-
 // Methods
-const handleFieldSlotClick = (slotId: string, position: PlayerPosition) => {
+const handleFieldSlotClick = (slotId: string, position: PlayerPositionAbbreviation) => {
   emit('clickFieldSlot', slotId, position);
 };
 
 const handleBenchSlotClick = (slotId: string) => {
   emit('clickBenchSlot', slotId);
-};
-
-const handleDrop = (positionId: string, position: PlayerPosition) => {
-  emit('dropPlayer', positionId, position);
 };
 
 const handleRemove = (positionId: string) => {

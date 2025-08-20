@@ -23,7 +23,7 @@ export default {
         inter: ['Inter', 'sans-serif'],
       },
       colors: {
-        // GolazoKings FC Colors
+        // GolazoKings Colors
         'go-blue': 'hsl(var(--go-blue) / <alpha-value>)', // Azul EA FC principal
         'go-cyan': 'hsl(var(--go-cyan) / <alpha-value>)', // Cyan vibrante
         'go-purple': 'hsl(var(--go-purple) / <alpha-value>)', // Púrpura premium

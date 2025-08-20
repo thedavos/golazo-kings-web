@@ -1,189 +1,399 @@
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 import type { SearchResult } from './types';
 
+class StringNormalizationCache {
+  private cache = new Map<string, string>();
+  private readonly maxSize = 10000;
+
+  normalize(text: string): string {
+    if (this.cache.has(text)) {
+      return this.cache.get(text)!;
+    }
+
+    const normalized = text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    if (this.cache.size >= this.maxSize) {
+      // LRU simple: limpiar cache cuando está lleno
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+
+    this.cache.set(text, normalized);
+    return normalized;
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
+// Trie para autocompletado eficiente
+class TrieNode {
+  children: Map<string, TrieNode> = new Map();
+  isEndOfWord = false;
+  playerIndices: Set<number> = new Set();
+}
+
+class Trie {
+  private root = new TrieNode();
+
+  insert(word: string, playerIndex: number): void {
+    let node = this.root;
+    for (const char of word) {
+      if (!node.children.has(char)) {
+        node.children.set(char, new TrieNode());
+      }
+      node = node.children.get(char)!;
+      node.playerIndices.add(playerIndex);
+    }
+    node.isEndOfWord = true;
+  }
+
+  searchPrefix(prefix: string): Set<number> {
+    let node = this.root;
+    for (const char of prefix) {
+      if (!node.children.has(char)) {
+        return new Set();
+      }
+      node = node.children.get(char)!;
+    }
+    return node.playerIndices;
+  }
+
+  getSuggestions(prefix: string, limit: number = 5): string[] {
+    const suggestions: string[] = [];
+    let node = this.root;
+
+    // Navegar hasta el prefijo
+    for (const char of prefix) {
+      if (!node.children.has(char)) {
+        return [];
+      }
+      node = node.children.get(char)!;
+    }
+
+    // DFS para encontrar todas las palabras con este prefijo
+    const dfs = (currentNode: TrieNode, currentWord: string): void => {
+      if (suggestions.length >= limit) return;
+
+      if (currentNode.isEndOfWord) {
+        suggestions.push(prefix + currentWord);
+      }
+
+      for (const [char, childNode] of currentNode.children) {
+        dfs(childNode, currentWord + char);
+      }
+    };
+
+    dfs(node, '');
+    return suggestions;
+  }
+}
+
+// Pool de objetos para reducir garbage collection
+class SearchResultPool {
+  private pool: SearchResult[] = [];
+  private readonly maxPoolSize = 100;
+
+  acquire(player: PlayerDto, score: number, matchedFields: string[]): SearchResult {
+    const result = this.pool.pop() || { player: null!, score: 0, matchedFields: [] };
+    result.player = player;
+    result.score = score;
+    result.matchedFields = matchedFields;
+    return result;
+  }
+
+  release(result: SearchResult): void {
+    if (this.pool.length < this.maxPoolSize) {
+      result.matchedFields = [];
+      this.pool.push(result);
+    }
+  }
+
+  releaseAll(results: SearchResult[]): void {
+    results.forEach((r) => this.release(r));
+  }
+}
+
 export class PlayerSearchEngine {
   private readonly players: PlayerDto[];
   private searchIndex: Map<string, Set<number>>;
+  private trie: Trie;
+  private normalizationCache: StringNormalizationCache;
+  private resultPool: SearchResultPool;
+
+  // Índices adicionales para búsquedas frecuentes
+  private positionIndex: Map<string, Set<number>>;
+  private teamIndex: Map<string, Set<number>>;
+  private activePlayersIndex: Set<number>;
+
+  // Cache de búsquedas recientes (LRU)
+  private searchCache: Map<string, PlayerDto[]>;
+  private readonly maxCacheSize = 100;
+
+  // Pre-computados para evitar cálculos repetitivos
+  private playerSearchableText: Map<number, string>;
+  private levenshteinCache: Map<string, number>;
 
   constructor(players: PlayerDto[]) {
     this.players = players;
     this.searchIndex = new Map();
-    this.buildSearchIndex();
+    this.trie = new Trie();
+    this.normalizationCache = new StringNormalizationCache();
+    this.resultPool = new SearchResultPool();
+    this.positionIndex = new Map();
+    this.teamIndex = new Map();
+    this.activePlayersIndex = new Set();
+    this.searchCache = new Map();
+    this.playerSearchableText = new Map();
+    this.levenshteinCache = new Map();
+
+    this.buildAllIndices();
   }
 
   /**
-   * Construye un índice invertido para búsquedas rápidas
-   * Complejidad: O(n * m) donde n = número de jugadores, m = número promedio de tokens por jugador
+   * Construye todos los índices de manera optimizada
+   * Complejidad: O(n * m) pero con múltiples optimizaciones de cache
    */
-  private buildSearchIndex(): void {
+  private buildAllIndices(): void {
     this.players.forEach((player, index) => {
+      // Pre-computar texto buscable normalizado
+      const fullName = `${player.firstName} ${player.lastName}`.trim();
+      const searchableText = this.normalizationCache.normalize(
+        [fullName, player.nickname, player.position, player.team].filter(Boolean).join(' '),
+      );
+      this.playerSearchableText.set(index, searchableText);
+
+      // Índice principal con n-gramas para búsqueda parcial
       const searchableFields = [
         player.firstName,
         player.lastName,
         player.nickname,
         player.position,
-        player.positionAbbreviation,
         player.team,
-        `${player.firstName} ${player.lastName}`.trim(),
-      ];
+        fullName,
+      ].filter(Boolean);
 
       searchableFields.forEach((field) => {
-        if (field) {
-          const tokens = this.tokenize(field);
-          tokens.forEach((token) => {
-            if (!this.searchIndex.has(token)) {
-              this.searchIndex.set(token, new Set());
-            }
-            this.searchIndex.get(token)!.add(index);
-          });
+        const normalized = this.normalizationCache.normalize(field!);
+
+        // Tokenización estándar
+        const tokens = this.tokenize(normalized);
+        tokens.forEach((token) => {
+          if (!this.searchIndex.has(token)) {
+            this.searchIndex.set(token, new Set());
+          }
+          this.searchIndex.get(token)!.add(index);
+
+          // Agregar al Trie para autocompletado
+          this.trie.insert(token, index);
+        });
+
+        // N-gramas para búsqueda parcial (solo para campos principales)
+        if (field === player.firstName || field === player.lastName) {
+          this.addNGrams(normalized, index, 2, 3);
         }
       });
+
+      // Índices secundarios
+      if (player.position) {
+        const normalizedPosition = this.normalizationCache.normalize(player.position);
+        if (!this.positionIndex.has(normalizedPosition)) {
+          this.positionIndex.set(normalizedPosition, new Set());
+        }
+        this.positionIndex.get(normalizedPosition)!.add(index);
+      }
+
+      if (player.team) {
+        const normalizedTeam = this.normalizationCache.normalize(player.team);
+        if (!this.teamIndex.has(normalizedTeam)) {
+          this.teamIndex.set(normalizedTeam, new Set());
+        }
+        this.teamIndex.get(normalizedTeam)!.add(index);
+      }
+
+      if (player.isActive) {
+        this.activePlayersIndex.add(index);
+      }
     });
   }
 
   /**
-   * Tokeniza y normaliza el texto para búsqueda
-   * Maneja acentos, case-insensitive y elimina caracteres especiales
+   * Agrega n-gramas al índice para búsqueda parcial eficiente
+   */
+  private addNGrams(text: string, playerIndex: number, minN: number, maxN: number): void {
+    for (let n = minN; n <= maxN && n <= text.length; n++) {
+      for (let i = 0; i <= text.length - n; i++) {
+        const ngram = text.substring(i, i + n);
+        if (!this.searchIndex.has(ngram)) {
+          this.searchIndex.set(ngram, new Set());
+        }
+        this.searchIndex.get(ngram)!.add(playerIndex);
+      }
+    }
+  }
+
+  /**
+   * Tokenización optimizada con cache
    */
   private tokenize(text: string): string[] {
     return text
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Elimina acentos
-      .replace(/[^\w\s]/g, ' ') // Reemplaza caracteres especiales con espacios
+      .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
       .filter((token) => token.length > 0);
   }
 
   /**
-   * Calcula la distancia de Levenshtein para similitud de strings
-   * Usado para manejar typos y variaciones menores
+   * Distancia de Levenshtein optimizada con programación dinámica y cache
    */
   private levenshteinDistance(a: string, b: string): number {
-    const matrix = Array(b.length + 1)
-      .fill(null)
-      .map(() => Array(a.length + 1).fill(null)) as number[][];
-
-    for (let i = 0; i <= a.length; i += 1) {
-      matrix[0]![i] = i;
+    // Cache key para pares de strings
+    const cacheKey = `${a}|${b}`;
+    if (this.levenshteinCache.has(cacheKey)) {
+      return this.levenshteinCache.get(cacheKey)!;
     }
 
-    for (let j = 0; j <= b.length; j += 1) {
-      matrix[j]![0] = j;
+    // Early termination si la diferencia de longitud es muy grande
+    if (Math.abs(a.length - b.length) > 5) {
+      return Math.abs(a.length - b.length);
     }
 
-    for (let j = 1; j <= b.length; j += 1) {
-      for (let i = 1; i <= a.length; i += 1) {
-        const indicator = a[i - 1] === b[j - 1] ? 0 : 1;
-        matrix[j]![i] = Math.min(
-          matrix[j]![i - 1]! + 1, // deletion
-          matrix[j - 1]![i]! + 1, // insertion
-          matrix[j - 1]![i - 1]! + indicator, // substitution
+    // Optimización: usar array unidimensional en lugar de matriz
+    const len1 = a.length;
+    const len2 = b.length;
+    let prevRow = Array(len2 + 1).fill(0);
+    let currRow = Array(len2 + 1).fill(0);
+
+    // Inicializar primera fila
+    for (let j = 0; j <= len2; j++) {
+      prevRow[j] = j;
+    }
+
+    for (let i = 1; i <= len1; i++) {
+      currRow[0] = i;
+
+      for (let j = 1; j <= len2; j++) {
+        const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+        currRow[j] = Math.min(
+          currRow[j - 1] + 1, // inserción
+          prevRow[j] + 1, // eliminación
+          prevRow[j - 1] + cost, // sustitución
         );
       }
+
+      // Swap rows
+      [prevRow, currRow] = [currRow, prevRow];
     }
 
-    return matrix[b.length]![a.length]!;
+    const distance = prevRow[len2];
+
+    // Limitar tamaño del cache
+    if (this.levenshteinCache.size > 1000) {
+      // Limpiar cache cuando sea muy grande
+      const firstKey = this.levenshteinCache.keys().next().value;
+      this.levenshteinCache.delete(firstKey);
+    }
+
+    this.levenshteinCache.set(cacheKey, distance);
+    return distance;
   }
 
   /**
-   * Calcula el score de similitud entre dos strings
-   * Retorna un valor entre 0 y 1, donde 1 es coincidencia exacta
+   * Calcula similitud con múltiples métricas
    */
   private calculateSimilarity(query: string, target: string): number {
     if (query === target) return 1.0;
 
+    // Similitud de Jaccard para conjuntos de caracteres
+    const set1 = new Set(query);
+    const set2 = new Set(target);
+    const intersection = new Set([...set1].filter((x) => set2.has(x)));
+    const union = new Set([...set1, ...set2]);
+    const jaccardSimilarity = intersection.size / union.size;
+
+    // Similitud basada en Levenshtein
     const distance = this.levenshteinDistance(query, target);
     const maxLength = Math.max(query.length, target.length);
+    const levenshteinSimilarity = maxLength === 0 ? 1.0 : 1 - distance / maxLength;
 
-    if (maxLength === 0) return 1.0;
+    // Similitud de prefijo (boost si el target empieza con query)
+    const prefixBoost = target.startsWith(query) ? 0.2 : 0;
 
-    return 1 - distance / maxLength;
+    // Combinar métricas con pesos
+    return levenshteinSimilarity * 0.6 + jaccardSimilarity * 0.4 + prefixBoost;
   }
 
   /**
-   * Busca jugadores usando coincidencias exactas del índice
-   * Complejidad: O(1) para búsqueda en el índice + O(k) para procesar resultados
+   * Búsqueda exacta optimizada con intersección eficiente
    */
   private exactSearch(queryTokens: string[]): Set<number> {
+    if (queryTokens.length === 0) return new Set();
+
+    // Ordenar tokens por frecuencia (los menos frecuentes primero)
+    const tokensByFrequency = queryTokens
+      .map((token) => ({
+        token,
+        count: this.searchIndex.get(token)?.size || 0,
+      }))
+      .filter((t) => t.count > 0)
+      .sort((a, b) => a.count - b.count);
+
+    if (tokensByFrequency.length === 0) return new Set();
+
+    // Empezar con el conjunto más pequeño
+    let result = new Set(this.searchIndex.get(tokensByFrequency[0]!.token));
+
+    // Intersección con los demás conjuntos
+    for (let i = 1; i < tokensByFrequency.length && result.size > 0; i++) {
+      const currentSet = this.searchIndex.get(tokensByFrequency[i]!.token)!;
+      result = new Set([...result].filter((x) => currentSet.has(x)));
+    }
+
+    return result;
+  }
+
+  /**
+   * Búsqueda fuzzy optimizada con scoring mejorado
+   */
+  private fuzzySearch(query: string, threshold: number = 0.5): SearchResult[] {
+    const results: SearchResult[] = [];
+    const normalizedQuery = this.normalizationCache.normalize(query);
+    const queryTokens = new Set(this.tokenize(normalizedQuery));
+
+    // Usar índice para pre-filtrar candidatos
     const candidates = new Set<number>();
-    let isFirstToken = true;
-
     for (const token of queryTokens) {
-      const matchingIndices = this.searchIndex.get(token);
-
-      if (!matchingIndices || matchingIndices.size === 0) {
-        // Si no hay coincidencias para algún token, no hay resultados exactos
-        return new Set();
-      }
-
-      if (isFirstToken) {
-        matchingIndices.forEach((idx) => candidates.add(idx));
-        isFirstToken = false;
-      } else {
-        // Intersección: solo mantener jugadores que coinciden con todos los tokens
-        const intersection = new Set<number>();
-        candidates.forEach((idx) => {
-          if (matchingIndices.has(idx)) {
-            intersection.add(idx);
-          }
-        });
-        candidates.clear();
-        intersection.forEach((idx) => candidates.add(idx));
+      // Buscar tokens similares en el índice
+      for (const [indexToken, playerIndices] of this.searchIndex) {
+        if (this.calculateSimilarity(token, indexToken) > 0.7) {
+          playerIndices.forEach((idx) => candidates.add(idx));
+        }
       }
     }
 
-    return candidates;
-  }
+    // Evaluar solo candidatos pre-filtrados
+    candidates.forEach((index) => {
+      const player = this.players[index] as PlayerDto;
+      const searchableText = this.playerSearchableText.get(index)!;
 
-  /**
-   * Busca jugadores usando similitud fuzzy
-   * Complejidad: O(n * m) donde n = número de jugadores, m = número de campos por jugador
-   */
-  private fuzzySearch(query: string, threshold: number = 0.6): SearchResult[] {
-    const results: SearchResult[] = [];
-    const normalizedQuery = query
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+      // Calcular score usando múltiples factores
+      const textSimilarity = this.calculateSimilarity(normalizedQuery, searchableText);
 
-    this.players.forEach((player) => {
-      const searchableFields = [
-        { value: player.firstName, weight: 1.0, field: 'firstName' },
-        { value: player.lastName, weight: 1.0, field: 'lastName' },
-        { value: player.nickname, weight: 0.8, field: 'nickname' },
-        { value: `${player.firstName} ${player.lastName}`.trim(), weight: 1.2, field: 'fullName' },
-        { value: player.position, weight: 0.9, field: 'position' },
-        { value: player.positionAbbreviation, weight: 0.7, field: 'positionAbbreviation' },
-        { value: player.team, weight: 1.1, field: 'team' },
-      ];
+      // Boost por coincidencia de tokens
+      const playerTokens = new Set(this.tokenize(searchableText));
+      const tokenOverlap = [...queryTokens].filter((t) => playerTokens.has(t)).length;
+      const tokenBoost = (tokenOverlap / queryTokens.size) * 0.3;
 
-      let bestScore = 0;
-      const matchedFields: string[] = [];
+      // Boost por jugador activo
+      const activeBoost = player.isActive ? 0.1 : 0;
 
-      searchableFields.forEach(({ value, weight, field }) => {
-        if (value) {
-          const normalizedValue = value
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '');
-          const similarity = this.calculateSimilarity(normalizedQuery, normalizedValue);
-          const weightedScore = similarity * weight;
+      const finalScore = textSimilarity + tokenBoost + activeBoost;
 
-          if (weightedScore > threshold) {
-            matchedFields.push(field);
-          }
-
-          bestScore = Math.max(bestScore, weightedScore);
-        }
-      });
-
-      if (bestScore > threshold && matchedFields.length > 0) {
-        results.push({
-          player,
-          score: bestScore,
-          matchedFields,
-        });
+      if (finalScore > threshold) {
+        results.push(this.resultPool.acquire(player, finalScore, ['fuzzy']));
       }
     });
 
@@ -191,9 +401,7 @@ export class PlayerSearchEngine {
   }
 
   /**
-   * Función principal de búsqueda
-   * Combina búsqueda exacta e inexacta para obtener los mejores resultados
-   * Complejidad total: O(k + n * m) donde k = resultados exactos, n = jugadores, m = campos
+   * Búsqueda principal con cache y optimizaciones
    */
   public search(query: string): PlayerDto[] {
     if (!query || query.trim().length === 0) {
@@ -201,58 +409,71 @@ export class PlayerSearchEngine {
     }
 
     const trimmedQuery = query.trim();
-    const queryTokens = this.tokenize(trimmedQuery);
+
+    // Verificar cache
+    if (this.searchCache.has(trimmedQuery)) {
+      return this.searchCache.get(trimmedQuery)!;
+    }
+
+    const normalizedQuery = this.normalizationCache.normalize(trimmedQuery);
+    const queryTokens = this.tokenize(normalizedQuery);
 
     if (queryTokens.length === 0) {
       return [];
     }
 
-    // Paso 1: Búsqueda exacta usando el índice
+    // Búsqueda exacta
     const exactMatches = this.exactSearch(queryTokens);
-    const exactResults = Array.from(exactMatches).map((index) => ({
-      player: this.players[index],
-      score: 1.0,
-      matchedFields: ['exact'],
-    })) as SearchResult[];
+    const exactResults = Array.from(exactMatches).map((index) =>
+      this.resultPool.acquire(this.players[index]!, 1.0, ['exact']),
+    );
 
-    // Paso 2: Búsqueda fuzzy solo si no hay coincidencias exactas suficientes
+    // Búsqueda fuzzy si es necesario
     let fuzzyResults: SearchResult[] = [];
-    if (exactResults.length < 5) {
-      // Umbral configurable
-      fuzzyResults = this.fuzzySearch(trimmedQuery, 0.6);
+    if (exactResults.length < 10) {
+      fuzzyResults = this.fuzzySearch(trimmedQuery, 0.4);
 
-      // Filtrar resultados fuzzy que ya están en exactos
+      // Filtrar duplicados
       const exactPlayerIds = new Set(exactResults.map((r) => r.player.id));
       fuzzyResults = fuzzyResults.filter((r) => !exactPlayerIds.has(r.player.id));
     }
 
-    // Paso 3: Combinar y ordenar resultados
+    // Combinar y ordenar
     const allResults = [...exactResults, ...fuzzyResults];
 
-    // Ordenar por score descendente, luego por criterios adicionales
     allResults.sort((a, b) => {
-      // Priorizar score más alto
-      if (b.score !== a.score) {
+      if (Math.abs(b.score - a.score) > 0.01) {
         return b.score - a.score;
       }
 
-      // En caso de empate, priorizar jugadores activos
+      // Priorizar jugadores activos
       if (a.player.isActive !== b.player.isActive) {
         return a.player.isActive ? -1 : 1;
       }
 
-      // Finalmente, orden alfabético por nombre completo
+      // Orden alfabético
       const nameA = `${a.player.firstName} ${a.player.lastName}`.toLowerCase();
       const nameB = `${b.player.firstName} ${b.player.lastName}`.toLowerCase();
       return nameA.localeCompare(nameB);
     });
 
-    // Retornar solo los jugadores, limitando resultados para performance
-    return allResults.slice(0, 20).map((result) => result.player);
+    const finalResults = allResults.slice(0, 20).map((r) => r.player);
+
+    // Actualizar cache (LRU)
+    if (this.searchCache.size >= this.maxCacheSize) {
+      const firstKey = this.searchCache.keys().next().value;
+      this.searchCache.delete(firstKey);
+    }
+    this.searchCache.set(trimmedQuery, finalResults);
+
+    // Liberar objetos al pool
+    this.resultPool.releaseAll(allResults);
+
+    return finalResults;
   }
 
   /**
-   * Búsqueda avanzada con filtros adicionales
+   * Búsqueda avanzada optimizada con índices específicos
    */
   public advancedSearch(
     query: string,
@@ -263,45 +484,93 @@ export class PlayerSearchEngine {
       minScore?: number;
     } = {},
   ): PlayerDto[] {
-    const baseResults = this.search(query);
+    // Comenzar con conjunto de todos los jugadores o filtrados
+    let candidateIndices: Set<number>;
 
-    return baseResults.filter((player) => {
-      if (
-        filters.position &&
-        !player.position?.toLowerCase().includes(filters.position.toLowerCase())
-      ) {
-        return false;
+    if (filters.position || filters.team || filters.isActive !== undefined) {
+      // Usar índices específicos para filtrado inicial
+      const sets: Set<number>[] = [];
+
+      if (filters.position) {
+        const normalizedPosition = this.normalizationCache.normalize(filters.position);
+        const positionSet = this.positionIndex.get(normalizedPosition);
+        if (positionSet) sets.push(positionSet);
       }
 
-      if (filters.team && !player.team?.toLowerCase().includes(filters.team.toLowerCase())) {
-        return false;
+      if (filters.team) {
+        const normalizedTeam = this.normalizationCache.normalize(filters.team);
+        const teamSet = this.teamIndex.get(normalizedTeam);
+        if (teamSet) sets.push(teamSet);
       }
 
-      return !(filters.isActive !== undefined && player.isActive !== filters.isActive);
-    });
+      if (filters.isActive === true) {
+        sets.push(this.activePlayersIndex);
+      } else if (filters.isActive === false) {
+        const inactiveSet = new Set(
+          this.players.map((_, idx) => idx).filter((idx) => !this.activePlayersIndex.has(idx)),
+        );
+        sets.push(inactiveSet);
+      }
+
+      // Intersección de todos los conjuntos
+      if (sets.length > 0) {
+        candidateIndices = sets.reduce((acc, set) => new Set([...acc].filter((x) => set.has(x))));
+      } else {
+        candidateIndices = new Set(this.players.map((_, idx) => idx));
+      }
+    } else {
+      candidateIndices = new Set(this.players.map((_, idx) => idx));
+    }
+
+    // Filtrar players basado en índices candidatos
+    const filteredPlayers = Array.from(candidateIndices).map(
+      (idx) => this.players[idx],
+    ) as PlayerDto[];
+
+    // Crear un mini-engine temporal con jugadores filtrados
+    if (query && filteredPlayers.length > 0) {
+      const tempEngine = new PlayerSearchEngine(filteredPlayers);
+      return tempEngine.search(query);
+    }
+
+    return filteredPlayers.slice(0, 20);
   }
 
   /**
-   * Obtiene sugerencias de búsqueda basadas en términos parciales
+   * Autocompletado optimizado con Trie
    */
   public getSuggestions(partialQuery: string, limit: number = 5): string[] {
     if (!partialQuery || partialQuery.length < 2) {
       return [];
     }
 
-    const suggestions = new Set<string>();
-    const normalizedPartial = partialQuery
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '');
+    const normalizedPartial = this.normalizationCache.normalize(partialQuery);
+    return this.trie.getSuggestions(normalizedPartial, limit);
+  }
 
-    // Buscar en el índice términos que comiencen con la consulta parcial
-    this.searchIndex.forEach((playerIndices, term) => {
-      if (term.startsWith(normalizedPartial) && suggestions.size < limit) {
-        suggestions.add(term);
-      }
-    });
+  /**
+   * Limpia caches para liberar memoria
+   */
+  public clearCaches(): void {
+    this.searchCache.clear();
+    this.levenshteinCache.clear();
+    this.normalizationCache.clear();
+  }
 
-    return Array.from(suggestions).slice(0, limit);
+  /**
+   * Obtiene estadísticas del motor de búsqueda
+   */
+  public getStats(): {
+    totalPlayers: number;
+    indexSize: number;
+    cacheSize: number;
+    activePlayers: number;
+  } {
+    return {
+      totalPlayers: this.players.length,
+      indexSize: this.searchIndex.size,
+      cacheSize: this.searchCache.size,
+      activePlayers: this.activePlayersIndex.size,
+    };
   }
 }

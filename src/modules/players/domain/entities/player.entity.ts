@@ -27,6 +27,7 @@ export class Player {
   birthDate?: Date;
   nationality?: string | null;
   socialMediaHandle?: string | null;
+  isQueensLeaguePlayer: boolean;
   isWildCard: boolean;
   wildCardType?: PlayerWildcardType | null;
   wildCardDescription?: string | null;
@@ -58,6 +59,7 @@ export class Player {
     this.teamId = data.teamId || 0;
     this.teamUuid = data.teamUuid || '';
     this.seasonStats = data.seasonStats || [];
+    this.isQueensLeaguePlayer = data.isQueensLeaguePlayer || false;
 
     if (data.positionAbbreviation) this.positionAbbreviation = data.positionAbbreviation;
     if (data.preferredFoot) this.preferredFoot = data.preferredFoot;

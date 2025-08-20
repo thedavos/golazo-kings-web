@@ -7,7 +7,7 @@
     </q-page-container>
 
     <q-drawer v-model="drawerRight" side="right" behavior="mobile">
-      <q-scroll-area class="fit bg-white">
+      <q-scroll-area class="fit bg-gray-800">
         <q-toolbar>
           <q-toolbar-title class="flex items-center"> Menú </q-toolbar-title>
 
@@ -26,13 +26,23 @@
         </q-list>
       </q-scroll-area>
     </q-drawer>
+
+    <q-drawer v-model="drawerLeft" bordered overlay side="left" behavior="desktop">
+      <q-scroll-area
+        class="fit bg-secondary text-white"
+        :vertical-bar-style="{ background: 'primary' }"
+      >
+        <player-sidebar-content @close-sidebar="drawerLeft = false" />
+      </q-scroll-area>
+    </q-drawer>
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { useSharedMainLayout } from 'src/modules/shared/composables/useMainLayout';
 import { HOME_TABS_CONFIG as tabs } from 'src/modules/home/components/HomeHeader';
-import HomeHeader from 'src/modules/home/components/HomeHeader';
+import { HomeHeader } from 'src/modules/home/components/HomeHeader';
+import { PlayerSidebarContent } from 'src/modules/players/components/PlayerSidebarContent';
 
-const drawerRight = ref(false);
+const { drawerRight, drawerLeft } = useSharedMainLayout();
 </script>

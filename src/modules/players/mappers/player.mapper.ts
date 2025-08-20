@@ -57,6 +57,7 @@ export class PlayerMapper {
       nationality: player.nationality || null,
       socialMediaHandle: player.socialMediaHandle || null,
       isWildCard: player.isWildCard,
+      isQueensLeaguePlayer: player.isQueensLeaguePlayer,
       wildCardType: player.wildCardType || null,
       wildCardDescription: player.wildCardDescription || null,
       formerTeam: player.formerTeam || null,

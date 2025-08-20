@@ -1,10 +1,42 @@
 <template>
   <div
-    class="relative bg-black/10 rounded-lg border-2 border-dashed border-slate-500/50 hover:border-purple-400/50 transition-all duration-200 min-h-[80px] flex flex-col items-center justify-center p-2 cursor-pointer"
+    :class="[
+      'relative  rounded-lg border-2 border-slate-500/50 hover:border-purple-400/50 transition-all duration-200 min-h-[80px] flex flex-col items-center justify-center p-2 cursor-pointer',
+      player || selected ? 'border-solid bg-gray-900' : 'border-dashed bg-gray-800',
+    ]"
     @dragover.prevent
     @drop="handleDrop"
     @click="handleAdd"
   >
+    <q-menu
+      v-if="player"
+      class="border border-slate-500 rounded-borders bg-gray-800"
+      anchor="bottom right"
+      self="bottom left"
+      :offset="[5, 0]"
+    >
+      <q-list bordered dense separator>
+        <q-item clickable>
+          <q-item-section>Ver jugador</q-item-section>
+        </q-item>
+        <q-item clickable>
+          <q-item-section>Mover jugador</q-item-section>
+        </q-item>
+        <q-item clickable @click="showSwapDialog = true">
+          <q-item-section>Intercambiar jugador</q-item-section>
+        </q-item>
+        <q-item clickable>
+          <q-item-section>Editar salario</q-item-section>
+        </q-item>
+        <q-item clickable>
+          <q-item-section>Editar rating</q-item-section>
+        </q-item>
+        <q-item clickable @click="handleRemove">
+          <q-item-section>Quitar jugador</q-item-section>
+        </q-item>
+      </q-list>
+    </q-menu>
+
     <!-- Player in bench slot -->
     <div v-if="player" class="w-full">
       <div
@@ -13,7 +45,6 @@
           'mx-auto rounded-full flex items-center justify-center cursor-pointer hover:scale-105 transition-transform border-2 shadow-md',
           isKings ? 'from-yellow-300 to-yellow-600' : 'from-blue-300 to-blue-600',
         ]"
-        @click="handleRemove"
       >
         <span class="text-xs font-bold text-white">{{ playerInitials }}</span>
       </div>
@@ -23,11 +54,6 @@
           {{ player.firstName }} {{ player.lastName }}
         </div>
         <div class="text-xs text-gray-400">{{ player.position }}</div>
-
-        <!-- Quick swap button -->
-        <q-btn size="xs" color="purple" flat class="mt-1 text-xs" @click="showSwapDialog = true">
-          <q-icon name="fa fa-arrows-rotate" size="xs" />
-        </q-btn>
       </div>
     </div>
 
@@ -35,7 +61,7 @@
     <div v-else class="text-center">
       <div
         :style="{ width: `${positionDimension}px`, height: `${positionDimension}px` }"
-        class="mx-auto rounded-full border-2 border-dashed border-white/50 flex items-center justify-center bg-black/10 hover:bg-black transition-colors ease-in cursor-pointer"
+        class="mx-auto rounded-full border-2 border-dashed border-white/50 flex items-center justify-center bg-black/10 transition-colors ease-in cursor-pointer"
       >
         <q-icon name="fa fa-plus" class="text-slate-400" size="sm" />
       </div>
@@ -47,7 +73,7 @@
       <q-card class="bg-slate-800 text-white min-w-[300px]">
         <q-card-section class="pb-2">
           <div class="text-h6 flex items-center gap-2">
-            <q-icon name="swap_horiz" class="text-purple-400" />
+            <q-icon name="fa fa-arrow-right-arrow-left" class="text-purple-400" />
             Intercambiar jugador
           </div>
         </q-card-section>
@@ -93,11 +119,12 @@ import type { LeagueOption } from 'src/modules/home/components/HomeDemoBuilder';
 
 interface Props {
   benchSlot: BenchSlot;
-  player: PlayerDto;
+  player: PlayerDto | undefined;
   selectedLeague: LeagueOption;
   fieldPositions: FieldPositions;
   fieldPlayer: Record<string, PlayerDto>;
   isKings: boolean;
+  selected: boolean;
   positionDimension: number;
 }
 
@@ -112,7 +139,9 @@ const availableFieldPositions = computed(() => {
   return props.fieldPositions || [];
 });
 
-const playerInitials = computed(() => getInitials(props.player.firstName, props.player.lastName));
+const playerInitials = computed(() =>
+  props.player?.firstName ? getInitials(props.player.firstName, props.player.lastName) : 'KL',
+);
 
 // Methods
 const handleDrop = (e: Event) => {
@@ -130,6 +159,7 @@ const handleSwap = (fieldPositionId: string) => {
 };
 
 const handleAdd = (e: Event) => {
+  if (props.player) return;
   e.preventDefault();
   emit('add', props.benchSlot.id);
 };

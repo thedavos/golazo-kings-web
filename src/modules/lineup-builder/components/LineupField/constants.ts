@@ -9,7 +9,7 @@ export const FORMATION_CONFIGURATION: FormationConfigurationType = {
     {
       id: 'por',
       x: 50,
-      y: 85,
+      y: 88,
       position: PlayerPosition.PORTERO,
       abbreviation: PlayerPositionAbbreviation.PO,
     },
@@ -60,7 +60,7 @@ export const FORMATION_CONFIGURATION: FormationConfigurationType = {
     {
       id: 'por',
       x: 50,
-      y: 85,
+      y: 88,
       position: PlayerPosition.PORTERO,
       abbreviation: PlayerPositionAbbreviation.PO,
     },
@@ -102,7 +102,7 @@ export const FORMATION_CONFIGURATION: FormationConfigurationType = {
     {
       id: 'del1',
       x: 50,
-      y: 20,
+      y: 16,
       position: PlayerPosition.DELANTERO_CENTRO,
       abbreviation: PlayerPositionAbbreviation.DC,
     },
@@ -111,7 +111,7 @@ export const FORMATION_CONFIGURATION: FormationConfigurationType = {
     {
       id: 'por',
       x: 50,
-      y: 85,
+      y: 88,
       position: PlayerPosition.PORTERO,
       abbreviation: PlayerPositionAbbreviation.PO,
     },
@@ -146,14 +146,14 @@ export const FORMATION_CONFIGURATION: FormationConfigurationType = {
     {
       id: 'del1',
       x: 40,
-      y: 20,
+      y: 16,
       position: PlayerPosition.DELANTERO_CENTRO,
       abbreviation: PlayerPositionAbbreviation.DC,
     },
     {
       id: 'del2',
       x: 60,
-      y: 20,
+      y: 16,
       position: PlayerPosition.DELANTERO_CENTRO,
       abbreviation: PlayerPositionAbbreviation.DC,
     },
@@ -162,7 +162,7 @@ export const FORMATION_CONFIGURATION: FormationConfigurationType = {
     {
       id: 'por',
       x: 50,
-      y: 85,
+      y: 88,
       position: PlayerPosition.PORTERO,
       abbreviation: PlayerPositionAbbreviation.PO,
     },
@@ -204,7 +204,7 @@ export const FORMATION_CONFIGURATION: FormationConfigurationType = {
     {
       id: 'del1',
       x: 50,
-      y: 20,
+      y: 16,
       position: PlayerPosition.DELANTERO_CENTRO,
       abbreviation: PlayerPositionAbbreviation.DC,
     },
@@ -213,7 +213,7 @@ export const FORMATION_CONFIGURATION: FormationConfigurationType = {
     {
       id: 'por',
       x: 50,
-      y: 85,
+      y: 88,
       position: PlayerPosition.PORTERO,
       abbreviation: PlayerPositionAbbreviation.PO,
     },
@@ -264,7 +264,7 @@ export const FORMATION_CONFIGURATION: FormationConfigurationType = {
     {
       id: 'por',
       x: 50,
-      y: 85,
+      y: 88,
       position: PlayerPosition.PORTERO,
       abbreviation: PlayerPositionAbbreviation.PO,
     },
@@ -292,21 +292,21 @@ export const FORMATION_CONFIGURATION: FormationConfigurationType = {
     {
       id: 'del1',
       x: 30,
-      y: 20,
+      y: 16,
       position: PlayerPosition.DELANTERO_CENTRO,
       abbreviation: PlayerPositionAbbreviation.DC,
     },
     {
       id: 'del2',
       x: 50,
-      y: 20,
+      y: 16,
       position: PlayerPosition.DELANTERO_CENTRO,
       abbreviation: PlayerPositionAbbreviation.DC,
     },
     {
       id: 'del3',
       x: 70,
-      y: 20,
+      y: 16,
       position: PlayerPosition.DELANTERO_CENTRO,
       abbreviation: PlayerPositionAbbreviation.DC,
     },

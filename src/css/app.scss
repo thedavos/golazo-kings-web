@@ -22,10 +22,10 @@ h6 { font-size: 1.125rem; line-height: 1.75rem; }
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, var(--color-go-blue), var(--color-go-purple));
-  border-radius: 4px;
+  background: var(--color-go-blue);
+  border-radius: 1px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, var(--color-go-purple), var(--color-go-pink));
+  background: var(--color-go-purple);
 }

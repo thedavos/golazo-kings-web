@@ -28,7 +28,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  selectedFormation: '4-2-0',
+  selectedFormation: '3-2-1',
   totalPositions: 7,
 });
 

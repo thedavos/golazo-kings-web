@@ -25,12 +25,14 @@ export interface PlayerDto {
   nationality?: string | undefined | null;
   socialMediaHandle?: string | undefined | null;
   isWildCard: boolean;
+  isQueensLeaguePlayer: boolean;
   wildCardType?: PlayerWildcardType | undefined | null;
   wildCardDescription?: string | undefined | null;
   formerTeam?: string | undefined | null;
   referenceId?: number | undefined | null;
   referenceUrl?: string | undefined | null;
   rating?: number | undefined | null;
+  league?: string | undefined | null;
   team?: string;
   teamId: number;
   teamUuid: string;

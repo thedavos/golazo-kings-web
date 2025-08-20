@@ -6,7 +6,7 @@
         <p class="text-xl text-gray-300 mb-2">¡Prueba el constructor ahora sin registrarte!</p>
         <p class="text-lg text-blue-400">
           Forma tu plantilla completa con 7 titulares + 5 suplentes. Presupuesto:
-          {{ props.currentCurrency.formatter(budgetAmount) }}
+          {{ currentCurrency.formatter(budgetAmount) }}
         </p>
       </div>
 
@@ -20,9 +20,8 @@
               :selected-league="selectedLeague"
               :demo-players="demoPlayers"
               :bench="bench"
-              @drop-player="handleDrop"
+              :selected-slot="selectedSlotId"
               @remove-player="removePlayer"
-              @drop-bench-player="handleBenchDrop"
               @remove-bench-player="removeBenchPlayer"
               @swap-players="handleSwapPlayers"
               @auto-fill-bench="handleAutoFillBench"
@@ -153,18 +152,18 @@
                     input-class="text-white"
                     no-error-icon
                     reverse-fill-mask
-                    :mask="props.currentCurrency.mask"
+                    :mask="currentCurrency.mask"
                     :rules="[(val) => val > 0 || 'El presupuesto debe ser mayor a 0']"
                   >
                     <template #prepend>
-                      <span v-if="props.currentCurrency" class="text-yellow-400 font-semibold">{{
-                        props.currentCurrency.symbol
+                      <span v-if="currentCurrency" class="text-yellow-400 font-semibold">{{
+                        currentCurrency.symbol
                       }}</span>
                     </template>
                   </q-input>
                 </div>
                 <div class="mt-1 text-xs text-gray-400">
-                  Presupuesto: {{ props.currentCurrency.formatter(budgetAmount) }}
+                  Presupuesto: {{ currentCurrency.formatter(budgetAmount) }}
                 </div>
               </div>
 
@@ -211,14 +210,19 @@
                   </template>
                 </q-select>
               </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-300 mb-2">Mostrar rostro</label>
+                <q-toggle v-model="displayFace" name="displayFace" color="yellow-400" dense />
+              </div>
             </div>
           </q-card>
           <budget-card-mini
             :total-cost="totalCost"
             :remaining-budget="remainingBudget"
             :budget-amount="budgetAmount"
-            :currency-option="props.currentCurrency"
-            :formatter="props.currentCurrency.formatter"
+            :currency-option="currentCurrency"
+            :formatter="currentCurrency.formatter"
           />
           <q-btn dense size="md" color="primary" class="w-full" @click="$emit('start:building')">
             <q-icon name="fa fa-arrow-right" size="xs" class="mr-2" />
@@ -242,28 +246,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, useModel } from 'vue';
+import { watch } from 'vue';
+import { useSharedPlayerSearch } from 'src/modules/players/composables/usePlayerSearch';
 import { useSharedDemoBuilder } from 'src/modules/home/composables/useDemoBuilder';
 import { BudgetCardMini } from 'src/modules/budget/components/BudgetCard';
 import { DemoField } from 'src/modules/lineup-builder/components/LineupField';
-import {
-  FORMATION_CONFIGURATION as formationConfiguration,
-  FORMATION_OPTIONS as formationOptions,
-} from 'src/modules/lineup-builder/components/LineupField';
+import { FORMATION_OPTIONS as formationOptions } from 'src/modules/lineup-builder/components/LineupField';
 import {
   LEAGUE_OPTIONS as leagueOptions,
-  LEAGUE_OPTION_DEFAULT as leagueOptionDefault,
   CURRENCY_OPTIONS as currencyOptions,
 } from 'src/modules/home/components/HomeDemoBuilder';
-import type { LeagueOption, CurrencyOption } from 'src/modules/home/components/HomeDemoBuilder';
-import type { FormationName } from 'src/modules/lineup-builder/components/LineupField';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
-import type { PlayerPosition } from 'src/modules/players/domain/value-objects/player-position.enum';
+import type { PlayerPositionAbbreviation } from 'src/modules/players/domain/value-objects/player-position.enum';
 
 interface Props {
   demoPlayers: PlayerDto[];
-  currentCurrency: CurrencyOption;
-  selectedCurrency: string;
 }
 
 // Emits
@@ -283,29 +280,46 @@ const emit = defineEmits([
 const props = defineProps<Props>();
 
 // Composables
-const { lineup, bench, remainingBudget, budgetAmount, totalCost } = useSharedDemoBuilder();
+const {
+  lineup,
+  bench,
+  remainingBudget,
+  budgetAmount,
+  displayFace,
+  totalCost,
+  selectedSlotId,
+  selectedCurrency,
+  currentCurrency,
+  selectedLeagueValue,
+  selectedLeague,
+  selectedFormation,
+  currentFieldPositions,
+  resetBench,
+  resetLineup,
+} = useSharedDemoBuilder();
 
-// Reactive state
-const selectedLeagueValue = ref<string>(leagueOptionDefault.value);
-const selectedFormation = ref<FormationName>('4-2-0');
-const draggedPlayer = ref<PlayerDto | null>(null);
+const { clearEngine, clearSearch, refreshCache, initializeSearch } = useSharedPlayerSearch();
 
-// useModel
-const selectedCurrency = useModel(props, 'selectedCurrency');
+watch(
+  selectedLeagueValue,
+  async (newLeagueValue, oldLeagueValue) => {
+    if (newLeagueValue !== oldLeagueValue) {
+      resetBench();
+      resetLineup();
+      clearEngine();
+      clearSearch();
+      refreshCache();
+    }
 
-// Computed properties
-const selectedLeague = computed<LeagueOption>(
-  () =>
-    leagueOptions.find((league) => league.value === selectedLeagueValue.value) ||
-    leagueOptionDefault,
+    await initializeSearch(props.demoPlayers);
+  },
+  {
+    immediate: true,
+  },
 );
 
-const currentFieldPositions = computed(() => {
-  return formationConfiguration[selectedFormation.value] || formationConfiguration['4-2-0'];
-});
-
 // Dialog Methods
-const openPlayerSelection = (slotId: string, position: PlayerPosition) => {
+const openPlayerSelection = (slotId: string, position: PlayerPositionAbbreviation) => {
   emit('open-dialog:player', slotId, position);
 };
 
@@ -327,26 +341,6 @@ const isPlayerInFieldOrBench = (fieldOrBench: Record<string, PlayerDto>) => (pla
 
 const isPlayerInField = isPlayerInFieldOrBench(lineup.value);
 const isPlayerInBench = isPlayerInFieldOrBench(bench.value);
-
-const handleDrop = (positionId: string, position: PlayerPosition) => {
-  if (draggedPlayer.value && draggedPlayer.value.position === position) {
-    if (!isPlayerInField(draggedPlayer.value) && !isPlayerInBench(draggedPlayer.value)) {
-      emit('update:lineup', positionId, draggedPlayer.value);
-    }
-
-    draggedPlayer.value = null;
-  }
-};
-
-const handleBenchDrop = (slotId: string) => {
-  if (draggedPlayer.value) {
-    if (!isPlayerInField(draggedPlayer.value) && !isPlayerInBench(draggedPlayer.value)) {
-      emit('update:bench', slotId, draggedPlayer.value);
-    }
-
-    draggedPlayer.value = null;
-  }
-};
 
 const handleSwapPlayers = (benchSlotId: string, fieldPositionId: string) => {
   const benchPlayer = bench.value[benchSlotId];
