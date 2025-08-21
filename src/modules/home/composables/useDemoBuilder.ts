@@ -209,10 +209,7 @@ function useDemoBuilder() {
     selectedSlotPosition.value = null;
   };
 
-  const canSelectPlayer = (
-    player: PlayerDto,
-    requiredPosition: PlayerPositionAbbreviation,
-  ): boolean => {
+  const canSelectPlayer = (player: PlayerDto): boolean => {
     // Check if a player is already selected
     const isAlreadySelected = allSelectedPlayers.value.some((p) => p.id === player.id);
     if (isAlreadySelected) return false;
@@ -222,11 +219,11 @@ function useDemoBuilder() {
     if (exceedsBudget) return false;
 
     // Check position compatibility (if required)
-    return !(requiredPosition && player.positionAbbreviation !== requiredPosition);
+    return true;
   };
 
   const selectPlayer = (player: PlayerDto, requiredPosition: PlayerPositionAbbreviation) => {
-    if (!canSelectPlayer(player, requiredPosition))
+    if (!canSelectPlayer(player))
       return $q.notify({
         message: getPlayerAlert(player, requiredPosition),
         position: 'bottom-left',

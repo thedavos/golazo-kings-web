@@ -347,7 +347,7 @@ const onDropPlayer = (
   position: PlayerPositionAbbreviation,
 ) => {
   if (draggedPlayer.value) {
-    if (canSelectPlayer(draggedPlayer.value, position)) {
+    if (canSelectPlayer(draggedPlayer.value)) {
       selectedSlotId.value = slotId;
       selectedSlotType.value = slotType;
       selectedSlotPosition.value = position;
