@@ -1,5 +1,5 @@
 <template>
-  <q-header class="bg-secondary border-b border-go-blue/30">
+  <q-header class="bg-transparent absolute">
     <div class="container mx-auto py-2">
       <q-toolbar>
         <q-toolbar-title class="flex items-center md:justify-center gap-2">

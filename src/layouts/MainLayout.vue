@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="hHh lpR fFf" class="min-h-screen bg-background">
+  <q-layout view="hHh lpR fFf" class="min-h-screen bg-secondary text-white">
     <home-header @open-menu="drawerRight = true" />
 
     <q-page-container>
