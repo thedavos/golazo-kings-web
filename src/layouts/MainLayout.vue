@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="hHh lpR fFf" class="min-h-screen bg-secondary text-white">
+  <q-layout view="lHh lpR fFf" class="min-h-screen bg-secondary text-white">
     <home-header @open-menu="drawerRight = true" />
 
     <q-page-container>
@@ -27,7 +27,14 @@
       </q-scroll-area>
     </q-drawer>
 
-    <q-drawer v-model="drawerLeft" bordered overlay side="left" behavior="desktop">
+    <q-drawer
+      v-model="drawerLeft"
+      bordered
+      overlay
+      side="left"
+      behavior="desktop"
+      :width="leftDrawerWidth"
+    >
       <q-scroll-area
         class="fit bg-secondary text-white"
         :vertical-bar-style="{ background: 'primary' }"
@@ -39,10 +46,64 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted, ref } from 'vue';
+import { useQuasar } from 'quasar';
+import { useWindowSize } from '@vueuse/core';
 import { useSharedMainLayout } from 'src/modules/shared/composables/useMainLayout';
 import { HOME_TABS_CONFIG as tabs } from 'src/modules/home/components/HomeHeader';
 import { HomeHeader } from 'src/modules/home/components/HomeHeader';
 import { PlayerSidebarContent } from 'src/modules/players/components/PlayerSidebarContent';
 
 const { drawerRight, drawerLeft } = useSharedMainLayout();
+const { width } = useWindowSize();
+const $q = useQuasar();
+
+const leftDrawerWidth = ref(300);
+
+onMounted(() => {
+  const isPad = $q.screen.lt.md;
+  const isMobile = $q.screen.lt.sm;
+
+  if (isMobile) {
+    leftDrawerWidth.value = width.value;
+    return;
+  }
+
+  if (isPad) {
+    leftDrawerWidth.value = Math.ceil(width.value / 2);
+    return;
+  }
+
+  const builderContainer = document.querySelector('#builder-container');
+  const builderConfigurationSection = document.querySelector('#builder-configuration');
+
+  if (builderContainer && builderConfigurationSection) {
+    const builderContainerPaddingLeft = window
+      .getComputedStyle(builderContainer as HTMLElement)
+      .getPropertyValue('padding-left')
+      .replace('px', '');
+    const builderContainerMarginLeft = window
+      .getComputedStyle(builderContainer as HTMLElement)
+      .getPropertyValue('margin-left')
+      .replace('px', '');
+    const builderConfigurationSectionWidth = window
+      .getComputedStyle(builderConfigurationSection as HTMLElement)
+      .getPropertyValue('width')
+      .replace('px', '');
+
+    console.log(
+      builderContainerPaddingLeft,
+      builderContainerMarginLeft,
+      builderConfigurationSectionWidth,
+    );
+
+    leftDrawerWidth.value =
+      Number(builderContainerPaddingLeft) +
+      Number(builderContainerMarginLeft) +
+      Number(builderConfigurationSectionWidth);
+    return;
+  }
+
+  leftDrawerWidth.value = 100;
+});
 </script>

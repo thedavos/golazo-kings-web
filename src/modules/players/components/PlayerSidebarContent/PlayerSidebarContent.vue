@@ -76,6 +76,7 @@ const {
   draggedPlayer,
   selectedSlotPosition: requiredPosition,
   selectPlayer,
+  resetSelectedSlot,
 } = useSharedDemoBuilder();
 
 const {
@@ -99,6 +100,7 @@ const handleDragStart = (player: PlayerDto) => {
 
 const closeSidebar = () => {
   clearSearch();
+  resetSelectedSlot('field');
   emit('close-sidebar');
 };
 

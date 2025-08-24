@@ -12,8 +12,8 @@
     <q-menu
       v-if="player"
       class="border border-slate-500 rounded-borders bg-gray-800"
-      anchor="bottom right"
-      self="bottom left"
+      anchor="top right"
+      self="top left"
       :offset="[5, 0]"
     >
       <q-list bordered dense separator>
@@ -40,14 +40,13 @@
       <div
         :style="{ width: `${positionDimension}px`, height: `${positionDimension}px` }"
         :class="[
-          'mx-auto rounded-full flex items-center justify-center cursor-pointer transition-transform border-2 shadow-md',
+          'mx-auto rounded-full flex items-center justify-center cursor-pointer transition-transform border-2 shadow-md overflow-hidden',
           isKings ? 'from-yellow-300 to-yellow-600' : 'from-blue-300 to-blue-600',
         ]"
       >
-        <!--        <q-avatar v-if="player.profileImageUrl" size="40px" rounded>-->
-        <!--          <q-img :style="{ backgroundImage: `url(${player.profileImageUrl})` }" />-->
+        <!--        <q-avatar v-if="player.profileImageUrl" rounded size="lg">-->
+        <!--          <q-img :src="player.profileImageUrl" fit="cover" />-->
         <!--        </q-avatar>-->
-        <span class="text-xs font-bold text-white">{{ player.positionAbbreviation }}</span>
       </div>
 
       <div

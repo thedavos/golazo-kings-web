@@ -1,6 +1,6 @@
 <template>
   <section class="pb-16">
-    <div class="container mx-auto px-6">
+    <div id="builder-container" class="container mx-auto px-6">
       <div class="text-center mb-12">
         <h2 class="text-4xl text-primary font-bold mb-4">Demo Interactivo</h2>
         <p class="text-xl text-gray-300 mb-2">¡Prueba el constructor ahora sin registrarte!</p>
@@ -12,7 +12,7 @@
 
       <div class="grid lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
         <!-- Budget & Stats -->
-        <div class="lg:col-span-1 space-y-4">
+        <div id="builder-configuration" class="lg:col-span-1 space-y-4">
           <q-card class="bg-slate-800/50 border border-blue-500/20 backdrop-blur-sm p-6">
             <div class="flex items-center gap-2 mb-4">
               <q-icon name="fas fa-gear" class="text-yellow-400" size="sm" />
