@@ -214,7 +214,7 @@ const maxPositionLengthInLine = computed(() => {
 
 const positionDimension = computed<number>(() => {
   const fieldHtml = field.value;
-  const MAX_POSITION_WIDTH = 48;
+  const MAX_POSITION_WIDTH = 72;
   const MIN_POSITION_WIDTH = 36;
 
   if (!fieldHtml) {

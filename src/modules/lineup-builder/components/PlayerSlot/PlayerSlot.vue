@@ -1,11 +1,10 @@
 <template>
   <div
     :class="[
-      'p-2 cursor-pointer border-2 transition-all rounded-lg duration-200',
+      'cursor-pointer transition-all duration-200',
       type === 'field'
         ? 'absolute transform -translate-x-1/2 -translate-y-1/2 w-auto md:min-w-24'
-        : 'relative border-slate-500/50 min-h-[80px] flex flex-col items-center justify-center',
-      player || selected ? 'border-solid bg-gray-900' : 'border-dashed bg-gray-800',
+        : 'relative border-slate-500/50 flex flex-col items-center justify-center min-h-[80px]',
     ]"
     :style="type === 'field' ? { left: `${position?.x}%`, top: `${position?.y}%` } : {}"
     @dragover.prevent
@@ -37,60 +36,55 @@
       <div
         :style="{ width: `${positionDimension}px`, height: `${positionDimension}px` }"
         :class="[
-          'mx-auto rounded-full flex items-center justify-center cursor-pointer transition-transform border-2 shadow-md',
+          'mx-auto rounded-full overflow-hidden cursor-pointer transition-transform border-2 shadow-md relative bg-gray-800',
           type === 'bench' ? 'hover:scale-105' : '',
-          isKings ? 'from-yellow-300 to-yellow-600' : 'from-blue-300 to-blue-600',
+          player || selected ? 'border-solid bg-primary' : 'border-dashed bg-gray-800',
         ]"
       >
-        <q-avatar
-          v-if="player.profileImageUrl && type === 'field'"
-          rounded
-          size="lg"
-          class="overflow-hidden"
+        <!-- Player profile image -->
+        <div
+          v-if="player.profileImageUrl"
+          class="w-full h-full bg-cover bg-top bg-no-repeat"
+          :style="{ backgroundImage: `url(${player.profileImageUrl})` }"
+        />
+        <!-- Fallback with initials -->
+        <div
+          v-else
+          class="w-full h-full flex items-center justify-center text-white font-bold text-sm bg-gradient-to-br"
+          :class="isKings ? 'from-yellow-400 to-yellow-600' : 'from-blue-400 to-blue-600'"
         >
-          <q-img :src="player.profileImageUrl" fit="cover" />
-        </q-avatar>
-        <span v-else class="text-xs font-bold text-white">{{ player.positionAbbreviation }}</span>
+          {{ playerInitials }}
+        </div>
       </div>
 
+      <!-- Player name overlay (always at bottom) -->
+      <div
+        v-if="displayName"
+        class="absolute -bottom-[10px] left-0 right-0 text-center py-1 text-[10px] font-bold text-white bg-secondary/80 rounded-2xl select-none"
+      >
+        {{ displayName }}
+      </div>
+
+      <!-- Market value (top-left corner) -->
       <div
         v-if="player.marketValue"
-        class="absolute text-[8px] pl-1 pt-0.5 font-bold text-yellow-400 top-0 left-0"
+        class="absolute text-[10px] px-0.5 py-1 font-bold italic text-yellow-400 tracking-tighter bg-secondary border-1 rounded-md top-0 left-[5px]"
       >
         {{ formatter(player.marketValue) }}
-      </div>
-
-      <div class="text-center mt-1">
-        <div class="text-xs font-medium text-white truncate">
-          {{ displayName }}
-        </div>
       </div>
     </div>
 
     <!-- Empty slot -->
-    <div
-      v-else
-      :class="
-        type === 'field' ? 'flex column items-center justify-center text-center' : 'text-center'
-      "
-    >
+    <div v-else class="w-full flex items-center justify-center">
       <div
         :style="{ width: `${positionDimension}px`, height: `${positionDimension}px` }"
         :class="[
-          'rounded-full border-2 border-dashed border-white/50 flex items-center justify-center bg-black/10 transition-colors ease-in',
-          type === 'field' ? 'text-center' : 'mx-auto cursor-pointer',
+          'rounded-full border-2 flex items-center justify-center transition-colors ease-in',
+          selected ? 'border-solid bg-gray-900' : 'border-dashed bg-gray-800',
         ]"
       >
         <q-icon class="text-slate-400" name="fas fa-plus" size="sm" />
       </div>
-
-      <p
-        v-if="type === 'field'"
-        class="hidden md:block text-xs font-medium text-slate-400 m-0 mt-1 p-0"
-      >
-        {{ position?.abbreviation }}
-      </p>
-      <div v-else class="text-xs text-slate-400 mt-1">{{ benchSlot?.label }}</div>
     </div>
 
     <player-edit-salary-dialog
@@ -145,6 +139,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { PlayerEditSalaryDialog } from 'src/modules/players/dialogs/PlayerEditSalaryDialog';
+import { getInitials } from 'src/modules/shared/utils/initials.util';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 import type {
   FieldPosition,
@@ -183,8 +178,13 @@ const availableFieldPositions = computed(() => {
 
 const fullName = computed(() => `${props.player?.firstName} ${props.player?.lastName}`);
 const displayName = computed(() =>
-  fullName.value.length >= 14 ? props.player?.lastName : fullName.value,
+  fullName.value.length >= 16 ? props.player?.lastName : fullName.value,
 );
+
+const playerInitials = computed(() => {
+  if (!props.player?.firstName || !props.player?.lastName) return '';
+  return getInitials(props.player.firstName, props.player.lastName);
+});
 
 // Methods
 const handleDrop = (e: Event) => {
