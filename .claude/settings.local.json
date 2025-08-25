@@ -26,7 +26,12 @@
       "Bash(git commit:*)",
       "Bash(npm version:*)",
       "Bash(npm link:*)",
-      "Bash(claude-code-templates:*)"
+      "Bash(claude-code-templates:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm format:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   },
@@ -119,5 +124,9 @@
         ]
       }
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "memory",
+    "github"
+  ]
 }

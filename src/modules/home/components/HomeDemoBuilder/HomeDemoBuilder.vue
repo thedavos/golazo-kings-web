@@ -147,48 +147,11 @@
               </div>
 
               <!-- Formation Selector -->
-              <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Formación</label>
-                <q-select
-                  v-model="selectedFormation"
-                  name="selectFormation"
-                  option-label="label"
-                  option-value="value"
-                  emit-value
-                  map-options
-                  outlined
-                  dense
-                  color="blue"
-                  bg-color="slate-700"
-                  class="text-white"
-                  dropdown-icon="fa fa-caret-down"
-                  popup-content-class="bg-slate-800 text-white"
-                  :options="formationOptions"
-                >
-                  <template #option="{ opt, selected, toggleOption }">
-                    <q-item
-                      :active="selected"
-                      @click="toggleOption(opt)"
-                      clickable
-                      class="hover:bg-slate-600"
-                    >
-                      <q-item-section>
-                        <q-item-label class="text-white">{{ opt.label }}</q-item-label>
-                        <q-item-label caption class="text-gray-400">{{
-                          opt.description
-                        }}</q-item-label>
-                      </q-item-section>
-                      <q-item-section side>
-                        <q-badge :label="opt.players" color="blue" outline />
-                      </q-item-section>
-                    </q-item>
-                  </template>
-
-                  <template #selected-item="{ opt }">
-                    <span class="text-white">{{ opt.label }}</span>
-                  </template>
-                </q-select>
-              </div>
+              <formation-selector
+                :selected-formation="selectedFormation"
+                :can-select-custom="isCustomFormation"
+                @update:selected-formation="changeFormation"
+              />
             </div>
           </q-card>
           <budget-card-mini
@@ -237,6 +200,10 @@
               @deselect-bench-slot="deselectField('bench')"
               @drop-field-player="onDropFieldPlayer"
               @drop-bench-player="onDropBenchPlayer"
+              @drop-player-at-coordinates="handleDropPlayerAtCoordinates"
+              @field-player-drag-start="onFieldPlayerDragStart"
+              @field-player-drag-end="onFieldPlayerDragEnd"
+              @move-field-player-to-position="onMoveFieldPlayerToPosition"
               @update:salary="onPlayerSalaryUpdate"
             />
           </q-card>
@@ -252,7 +219,7 @@ import { useSharedPlayerSearch } from 'src/modules/players/composables/usePlayer
 import { useSharedDemoBuilder } from 'src/modules/home/composables/useDemoBuilder';
 import { BudgetCardMini } from 'src/modules/budget/components/BudgetCard';
 import { DemoField } from 'src/modules/lineup-builder/components/LineupField';
-import { FORMATION_OPTIONS as formationOptions } from 'src/modules/lineup-builder/components/LineupField';
+import { FormationSelector } from 'src/modules/home/components/FormationSelector';
 import {
   LEAGUE_OPTIONS as leagueOptions,
   CURRENCY_OPTIONS as currencyOptions,
@@ -285,6 +252,7 @@ const {
   lineup,
   bench,
   draggedPlayer,
+  draggedFromField,
   remainingBudget,
   budgetAmount,
   totalCost,
@@ -303,6 +271,13 @@ const {
   resetSelectedSlot,
   selectPlayer,
   canSelectPlayer,
+  dropPlayerAtCustomCoordinates,
+  changeFormation,
+  isCustomFormation,
+  startFieldPlayerDrag,
+  endFieldPlayerDrag,
+  moveFieldPlayerToCustomCoordinates,
+  moveFieldPlayerToPosition,
 } = useSharedDemoBuilder();
 
 const { clearEngine, clearSearch, refreshCache, initializeSearch } = useSharedPlayerSearch();
@@ -346,7 +321,7 @@ const onDropPlayer = (
       selectedSlotType.value = slotType;
       selectedSlotPosition.value = position;
     }
-    selectPlayer(draggedPlayer.value, position);
+    selectPlayer(draggedPlayer.value);
     draggedPlayer.value = null;
   }
 };
@@ -430,5 +405,32 @@ const handleAutoFillBench = () => {
 
 const handleClearBench = () => {
   emit('replace:bench', {});
+};
+
+// Field player drag handlers
+const onFieldPlayerDragStart = (dragData: {
+  player: PlayerDto | null;
+  positionId: string;
+  sourceType: string;
+  isEmpty?: boolean;
+}) => {
+  startFieldPlayerDrag(dragData.player, dragData.positionId, dragData.isEmpty || false);
+};
+
+const onFieldPlayerDragEnd = () => {
+  endFieldPlayerDrag();
+};
+
+const onMoveFieldPlayerToPosition = (targetPositionId: string) => {
+  moveFieldPlayerToPosition(targetPositionId);
+};
+
+const handleDropPlayerAtCoordinates = (x: number, y: number) => {
+  // Check if this is a field player drag or sidebar player drag
+  if (draggedFromField.value) {
+    moveFieldPlayerToCustomCoordinates(x, y);
+  } else {
+    dropPlayerAtCustomCoordinates(x, y);
+  }
 };
 </script>

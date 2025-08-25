@@ -350,6 +350,12 @@ export const FORMATION_OPTIONS = [
     description: 'Máxima ofensiva',
     players: '7 jugadores',
   },
+  {
+    label: 'Personalizado',
+    value: 'Personalizado',
+    description: 'Formación personalizada',
+    players: 'Posicionamiento libre',
+  },
 ];
 
 export const BENCH_SLOTS: BenchSlotList = [

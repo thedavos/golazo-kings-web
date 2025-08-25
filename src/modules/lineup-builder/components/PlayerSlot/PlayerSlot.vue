@@ -1,15 +1,18 @@
 <template>
   <div
+    :draggable="type === 'field'"
     :class="[
       'cursor-pointer transition-all duration-200',
       type === 'field'
-        ? 'absolute transform -translate-x-1/2 -translate-y-1/2 w-auto md:min-w-24'
+        ? 'absolute transform -translate-x-1/2 -translate-y-1/2 w-auto md:min-w-24 cursor-grab active:cursor-grabbing hover:scale-105'
         : 'relative border-slate-500/50 flex flex-col items-center justify-center min-h-[80px]',
     ]"
     :style="type === 'field' ? { left: `${position?.x}%`, top: `${position?.y}%` } : {}"
     @dragover.prevent
     @drop="handleDrop"
     @click="handleClick"
+    @dragstart="handleContainerDragStart"
+    @dragend="handleContainerDragEnd"
   >
     <q-menu
       v-if="player"
@@ -166,7 +169,16 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const emit = defineEmits(['drop', 'remove', 'add', 'deselect', 'update:salary', 'swap']);
+const emit = defineEmits([
+  'drop',
+  'remove',
+  'add',
+  'deselect',
+  'update:salary',
+  'swap',
+  'dragstart',
+  'dragend',
+]);
 
 const showSalaryDialog = ref(false);
 const showSwapDialog = ref(false);
@@ -178,7 +190,7 @@ const availableFieldPositions = computed(() => {
 
 const fullName = computed(() => `${props.player?.firstName} ${props.player?.lastName}`);
 const displayName = computed(() =>
-  fullName.value.length >= 16 ? props.player?.lastName : fullName.value,
+  fullName.value.length >= 16 ? props.player?.lastName || playerInitials.value : fullName.value,
 );
 
 const playerInitials = computed(() => {
@@ -187,8 +199,9 @@ const playerInitials = computed(() => {
 });
 
 // Methods
-const handleDrop = (e: Event) => {
+const handleDrop = (e: DragEvent) => {
   e.preventDefault();
+
   if (props.type === 'field') {
     emit('drop', props.position?.id, props.position?.abbreviation);
   } else {
@@ -221,4 +234,77 @@ const handleSwap = (fieldPositionId: string) => {
   emit('swap', props.benchSlot?.id, fieldPositionId);
   showSwapDialog.value = false;
 };
+
+// Unified container drag handlers
+const handleContainerDragStart = (event: DragEvent) => {
+  if (props.type !== 'field') return;
+  // Calculate the offset between the mouse pointer and the element's position
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+
+  // Calculate the offset from the mouse position to the element's current position
+  const offsetX = event.clientX - rect.left;
+  const offsetY = event.clientY - rect.top;
+
+  // Set drag data
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData(
+      'application/json',
+      JSON.stringify({
+        positionId: props.position?.id,
+        offsetX: offsetX,
+        offsetY: offsetY,
+      }),
+    );
+  }
+
+  // Emit unified drag start event
+  if (props.player) {
+    // Slot with player
+    emit('dragstart', {
+      player: props.player,
+      positionId: props.position?.id,
+      sourceType: 'field',
+      isEmpty: false,
+    });
+  } else {
+    // Empty slot
+    emit('dragstart', {
+      player: null,
+      positionId: props.position?.id,
+      sourceType: 'field',
+      isEmpty: true,
+    });
+  }
+};
+
+const handleContainerDragEnd = () => {
+  if (props.type !== 'field') return;
+
+  emit('dragend');
+};
 </script>
+
+<style lang="scss" scoped>
+/* Enhanced drag visual feedback */
+.cursor-grab:active {
+  cursor: grabbing !important;
+}
+
+/* Drag ghost styling - makes the dragged element semi-transparent */
+[draggable='true']:active {
+  opacity: 0.8;
+}
+
+/* Add subtle glow effect during hover for field slots */
+.absolute.hover\:scale-105:hover {
+  filter: drop-shadow(0 0 8px rgba(59, 130, 246, 0.4));
+  transform: translate(-50%, -50%) scale(1.05);
+}
+
+/* Ensure the entire slot container is interactive */
+.absolute[draggable='true'] {
+  user-select: none;
+}
+</style>
