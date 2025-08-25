@@ -1,10 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Write",
-      "MultiEdit",
-      "Edit"
-    ],
+    "allow": ["Write", "MultiEdit", "Edit"],
     "deny": []
   }
 }

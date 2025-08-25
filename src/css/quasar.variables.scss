@@ -13,14 +13,14 @@
 // Tip: Use the "Theme Builder" on Quasar's documentation website.
 // Using CSS variables from /src/css/app.scss as the single source of truth.
 // Note: The variables in app.scss are defined as HSL component values, so we wrap them in hsl().
-$primary   : var(--color-go-blue);
-$secondary : var(--color-bg-secondary);
-$accent    : var(--color-go-purple);
+$primary: var(--color-go-blue);
+$secondary: var(--color-bg-secondary);
+$accent: var(--color-go-purple);
 
-$dark      : var(--color-bg-primary);
-$dark-page : var(--color-bg-primary);
+$dark: var(--color-bg-primary);
+$dark-page: var(--color-bg-primary);
 
-$positive  : var(--color-go-green);
-$negative  : var(--color-destructive);
-$info      : var(--color-go-blue);
-$warning   : var(--color-go-gold);
+$positive: var(--color-go-green);
+$negative: var(--color-destructive);
+$info: var(--color-go-blue);
+$warning: var(--color-go-gold);
