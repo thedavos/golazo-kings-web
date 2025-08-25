@@ -189,11 +189,6 @@
                   </template>
                 </q-select>
               </div>
-
-              <div>
-                <label class="block text-sm font-medium text-gray-300 mb-2">Mostrar rostro</label>
-                <q-toggle v-model="displayFace" name="displayFace" color="yellow-400" dense />
-              </div>
             </div>
           </q-card>
           <budget-card-mini
@@ -292,7 +287,6 @@ const {
   draggedPlayer,
   remainingBudget,
   budgetAmount,
-  displayFace,
   totalCost,
   selectedSlotId,
   selectedSlotType,

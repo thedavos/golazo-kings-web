@@ -26,7 +26,6 @@ function useDemoBuilder() {
   const selectedSlotId = ref<string | null>(null);
   const selectedSlotPosition = ref<PlayerPositionAbbreviation | null>(null);
   const selectedSlotType = ref<'field' | 'bench'>('field');
-  const displayFace = ref(false);
   const draggedPlayer = ref<PlayerDto | null>(null);
 
   const $q = useQuasar();
@@ -269,7 +268,6 @@ function useDemoBuilder() {
     selectedSlotType,
     selectedFormation,
     selectedLeagueValue,
-    displayFace,
 
     // Computed
     currentCurrency,
