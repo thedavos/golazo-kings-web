@@ -1,9 +1,12 @@
 <template>
-  <q-layout view="lHh lpR fFf" class="min-h-screen bg-secondary text-white">
+  <q-layout view="lHh lpR fff" class="min-h-screen bg-secondary text-white">
     <home-header @open-menu="drawerRight = true" />
 
-    <q-page-container>
-      <router-view />
+    <q-page-container class="flex flex-col min-h-screen">
+      <div class="flex-1">
+        <router-view />
+      </div>
+      <home-footer />
     </q-page-container>
 
     <q-drawer v-model="drawerRight" side="right" behavior="mobile">
@@ -52,6 +55,7 @@ import { useWindowSize } from '@vueuse/core';
 import { useSharedMainLayout } from 'src/modules/shared/composables/useMainLayout';
 import { HOME_TABS_CONFIG as tabs } from 'src/modules/home/components/HomeHeader';
 import { HomeHeader } from 'src/modules/home/components/HomeHeader';
+import { HomeFooter } from 'src/modules/home/components/HomeFooter';
 import { PlayerSidebarContent } from 'src/modules/players/components/PlayerSidebarContent';
 
 const { drawerRight, drawerLeft } = useSharedMainLayout();
