@@ -124,5 +124,9 @@
         ]
       }
     ]
-  }
+  },
+  "enabledMcpjsonServers": [
+    "memory",
+    "github"
+  ]
 }

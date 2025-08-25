@@ -236,20 +236,27 @@ const handleSwap = (fieldPositionId: string) => {
 };
 
 // Unified container drag handlers
-const handleContainerDragStart = (e: DragEvent) => {
+const handleContainerDragStart = (event: DragEvent) => {
   if (props.type !== 'field') return;
+  // Calculate the offset between the mouse pointer and the element's position
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+
+  // Calculate the offset from the mouse position to the element's current position
+  const offsetX = event.clientX - rect.left;
+  const offsetY = event.clientY - rect.top;
 
   // Set drag data
-  if (e.dataTransfer) {
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData(
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData(
       'application/json',
       JSON.stringify({
         positionId: props.position?.id,
-        offsetX: e.offsetX,
-        offsetY: e.offsetY,
+        offsetX: offsetX,
+        offsetY: offsetY,
       }),
-    ); // Required for some browsers
+    );
   }
 
   // Emit unified drag start event
