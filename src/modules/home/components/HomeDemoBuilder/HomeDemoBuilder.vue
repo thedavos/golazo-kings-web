@@ -200,7 +200,10 @@
               @deselect-bench-slot="deselectField('bench')"
               @drop-field-player="onDropFieldPlayer"
               @drop-bench-player="onDropBenchPlayer"
-              @drop-player-at-coordinates="dropPlayerAtCustomCoordinates"
+              @drop-player-at-coordinates="handleDropPlayerAtCoordinates"
+              @field-player-drag-start="onFieldPlayerDragStart"
+              @field-player-drag-end="onFieldPlayerDragEnd"
+              @move-field-player-to-position="onMoveFieldPlayerToPosition"
               @update:salary="onPlayerSalaryUpdate"
             />
           </q-card>
@@ -249,6 +252,7 @@ const {
   lineup,
   bench,
   draggedPlayer,
+  draggedFromField,
   remainingBudget,
   budgetAmount,
   totalCost,
@@ -270,6 +274,10 @@ const {
   dropPlayerAtCustomCoordinates,
   changeFormation,
   isCustomFormation,
+  startFieldPlayerDrag,
+  endFieldPlayerDrag,
+  moveFieldPlayerToCustomCoordinates,
+  moveFieldPlayerToPosition,
 } = useSharedDemoBuilder();
 
 const { clearEngine, clearSearch, refreshCache, initializeSearch } = useSharedPlayerSearch();
@@ -397,5 +405,32 @@ const handleAutoFillBench = () => {
 
 const handleClearBench = () => {
   emit('replace:bench', {});
+};
+
+// Field player drag handlers
+const onFieldPlayerDragStart = (dragData: {
+  player: PlayerDto | null;
+  positionId: string;
+  sourceType: string;
+  isEmpty?: boolean;
+}) => {
+  startFieldPlayerDrag(dragData.player, dragData.positionId, dragData.isEmpty || false);
+};
+
+const onFieldPlayerDragEnd = () => {
+  endFieldPlayerDrag();
+};
+
+const onMoveFieldPlayerToPosition = (targetPositionId: string) => {
+  moveFieldPlayerToPosition(targetPositionId);
+};
+
+const handleDropPlayerAtCoordinates = (x: number, y: number) => {
+  // Check if this is a field player drag or sidebar player drag
+  if (draggedFromField.value) {
+    moveFieldPlayerToCustomCoordinates(x, y);
+  } else {
+    dropPlayerAtCustomCoordinates(x, y);
+  }
 };
 </script>

@@ -32,8 +32,8 @@
             </q-item-label>
           </q-item-section>
           <q-item-section side v-if="opt.value === 'Personalizado'">
-            <q-icon name="fas fa-lock" class="text-gray-500" v-if="!canSelectCustom" />
-            <q-icon name="fas fa-edit" class="text-purple-400" v-else />
+            <q-icon name="fas fa-lock" size="xs" class="text-gray-500" v-if="!canSelectCustom" />
+            <q-icon name="fas fa-edit" size="xs" class="text-purple-400" v-else />
           </q-item-section>
         </q-item>
       </template>
@@ -45,7 +45,7 @@
 
     <div v-if="selectedFormation === 'Personalizado'" class="mt-2 text-xs text-purple-300">
       <q-icon name="fas fa-info-circle" class="mr-1" />
-      Arrastra a los jugadores directamente al campo para posicionarlos libremente
+      Arrastra a los jugadores directamente en el campo para posicionarlos libremente
     </div>
   </div>
 </template>

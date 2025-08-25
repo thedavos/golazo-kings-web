@@ -29,7 +29,9 @@
       "Bash(claude-code-templates:*)",
       "Bash(pnpm dev:*)",
       "Bash(pnpm lint:*)",
-      "Bash(pnpm format:*)"
+      "Bash(pnpm format:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   },

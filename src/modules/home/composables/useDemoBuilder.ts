@@ -11,10 +11,18 @@ import {
   type CurrencyOption,
   type LeagueOption,
 } from 'src/modules/home/components/HomeDemoBuilder';
+import { findClosest } from 'src/modules/shared/utils/findClosest.util';
 import { FORMATION_CONFIGURATION as formationConfiguration } from 'src/modules/lineup-builder/components/LineupField';
+import {
+  PlayerPositionAbbreviation,
+  PlayerPosition,
+} from 'src/modules/players/domain/value-objects/player-position.enum';
+import type {
+  FormationName,
+  FieldPositions,
+  FieldPosition,
+} from 'src/modules/lineup-builder/components/LineupField';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
-import type { PlayerPositionAbbreviation } from 'src/modules/players/domain/value-objects/player-position.enum';
-import type { FormationName } from 'src/modules/lineup-builder/components/LineupField';
 
 function useDemoBuilder() {
   const lineup = ref<Record<string, PlayerDto>>({});
@@ -27,10 +35,17 @@ function useDemoBuilder() {
   const selectedSlotPosition = ref<PlayerPositionAbbreviation | null>(null);
   const selectedSlotType = ref<'field' | 'bench'>('field');
   const draggedPlayer = ref<PlayerDto | null>(null);
+  const draggedFromField = ref<{
+    player: PlayerDto | null;
+    positionId: string;
+    isEmpty: boolean;
+  } | null>(null);
 
   // Custom positioning state
   const customPlayerPositions = ref<Record<string, { x: number; y: number }>>({});
   const isCustomFormation = ref(false);
+  // Track the last predefined formation used before switching to custom
+  const lastPredefinedFormation = ref<FormationName>('3-2-1');
 
   const $q = useQuasar();
 
@@ -61,24 +76,60 @@ function useDemoBuilder() {
 
   const lineupPlayers = computed(() => Object.values(lineup.value).filter(Boolean));
 
-  const currentFieldPositions = computed(() => {
+  const currentFieldPositions = computed<FieldPositions>(() => {
     if (selectedFormation.value === 'Personalizado' || isCustomFormation.value) {
-      // Generate dynamic positions based on custom coordinates and assigned players
-      const positions = [];
+      // Get the base formation to maintain empty slots
+      const baseFormationKey =
+        lastPredefinedFormation.value !== 'Personalizado'
+          ? lastPredefinedFormation.value
+          : ('3-2-1' as const);
+      const baseFormation =
+        formationConfiguration[baseFormationKey] || formationConfiguration['3-2-1'];
 
-      for (const [positionId, player] of Object.entries(lineup.value)) {
-        if (
-          player &&
-          customPlayerPositions.value[positionId] &&
-          player.position &&
-          player.positionAbbreviation
-        ) {
+      // Start with all positions from the base formation
+      const positions = [] as FieldPositions;
+
+      // Include all base formation positions (maintaining empty slots)
+      for (const basePos of baseFormation) {
+        // Check if this position has custom coordinates
+        const customCoords = customPlayerPositions.value[basePos.id];
+        if (customCoords) {
+          const player = lineup.value[basePos.id];
+          positions.push({
+            id: basePos.id,
+            x: customCoords.x,
+            y: customCoords.y,
+            position: (player?.position as PlayerPosition) || basePos.position,
+            abbreviation:
+              (player?.positionAbbreviation as PlayerPositionAbbreviation) || basePos.abbreviation,
+          });
+        } else {
+          // Keep the original formation position (empty or occupied)
+          const player = lineup.value[basePos.id];
+          positions.push({
+            id: basePos.id,
+            x: basePos.x,
+            y: basePos.y,
+            position: (player?.position as PlayerPosition) || basePos.position,
+            abbreviation:
+              (player?.positionAbbreviation as PlayerPositionAbbreviation) || basePos.abbreviation,
+          });
+        }
+      }
+
+      // Include any additional custom positions (newly created during drag operations)
+      for (const [positionId, coordinates] of Object.entries(customPlayerPositions.value)) {
+        // Only add if it's not already included from base formation
+        if (!baseFormation.some((pos) => pos.id === positionId)) {
+          const player = lineup.value[positionId];
           positions.push({
             id: positionId,
-            x: customPlayerPositions.value[positionId].x,
-            y: customPlayerPositions.value[positionId].y,
-            position: player.position,
-            abbreviation: player.positionAbbreviation,
+            x: coordinates.x,
+            y: coordinates.y,
+            position: (player?.position as PlayerPosition) || PlayerPosition.MEDIO_CENTRO,
+            abbreviation:
+              (player?.positionAbbreviation as PlayerPositionAbbreviation) ||
+              PlayerPositionAbbreviation.MC,
           });
         }
       }
@@ -228,14 +279,38 @@ function useDemoBuilder() {
 
     // Add player to appropriate slot
     if (selectedSlotType.value === 'field') {
-      updateLineup(selectedSlotId.value, player);
+      if (isPositionEmpty(selectedSlotId.value) || lineupPlayers.value.length === 7) {
+        updateLineup(selectedSlotId.value, player);
+      } else {
+        const emptyPositions = [...currentFieldPositions.value].filter((position) =>
+          isPositionEmpty(position.id),
+        );
+        const targetPosition = currentFieldPositions.value.find(
+          (position) => position.id === selectedSlotId.value,
+        ) as FieldPosition;
+        const closestPosition = findClosest(
+          targetPosition?.x,
+          targetPosition?.y,
+          emptyPositions,
+          'x',
+          'y',
+        ) as FieldPosition;
+        selectedSlotId.value = closestPosition.id;
+        selectedSlotPosition.value = closestPosition.abbreviation;
+
+        updateLineup(selectedSlotId.value, player);
+      }
     } else {
       updateBench(selectedSlotId.value, player);
     }
+  };
 
-    // Reset dialog state
-    selectedSlotId.value = null;
-    selectedSlotPosition.value = null;
+  const isPlayerInPosition = (player: PlayerDto, positionId: string): boolean => {
+    return lineup.value[positionId]?.id === player.id;
+  };
+
+  const isPositionEmpty = (positionId: string): boolean => {
+    return !lineup.value[positionId];
   };
 
   const canDropPlayer = (player: PlayerDto): boolean => {
@@ -296,29 +371,64 @@ function useDemoBuilder() {
         timeout: 2500,
       });
 
-    // Generate a unique position ID for custom positions
-    const customPositionId = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    if (selectedSlotId.value && !isPositionEmpty(selectedSlotId.value)) {
+      const emptyPositions = [...currentFieldPositions.value].filter((position) =>
+        isPositionEmpty(position.id),
+      );
 
-    // Add player to lineup
-    updateLineup(customPositionId, draggedPlayer.value);
+      const closestPosition = findClosest(x, y, emptyPositions, 'x', 'y') as FieldPosition;
+
+      selectedSlotId.value = closestPosition.id;
+      selectedSlotPosition.value = closestPosition.abbreviation;
+
+      updateLineup(closestPosition.id, draggedPlayer.value);
+    } else if (selectedSlotId.value) {
+      updateLineup(selectedSlotId.value, draggedPlayer.value);
+    } else {
+      const emptyPositions = [...currentFieldPositions.value].filter((position) =>
+        isPositionEmpty(position.id),
+      );
+      const closestPosition = findClosest(x, y, emptyPositions, 'x', 'y') as FieldPosition;
+
+      selectedSlotId.value = closestPosition.id;
+      selectedSlotPosition.value = closestPosition.abbreviation;
+
+      updateLineup(selectedSlotId.value, draggedPlayer.value);
+    }
 
     // Store custom coordinates
-    customPlayerPositions.value[customPositionId] = { x, y };
+    customPlayerPositions.value[selectedSlotId.value] = { x, y };
 
     // Switch to custom formation if not already
     if (selectedFormation.value !== 'Personalizado') {
+      lastPredefinedFormation.value = selectedFormation.value;
       selectedFormation.value = 'Personalizado';
       isCustomFormation.value = true;
     }
 
+    draggedFromField.value = {
+      player: draggedPlayer.value,
+      positionId: selectedSlotId.value,
+      isEmpty: false,
+    };
+
     // Reset dragged player
     draggedPlayer.value = null;
+
+    if (selectedSlotId.value) {
+      moveFieldPlayerToPosition(selectedSlotId.value);
+    }
   };
 
   const changeFormation = (newFormation: FormationName) => {
     if (newFormation === 'Personalizado') {
       // Don't allow direct selection of Personalizado
       return;
+    }
+
+    // Store current formation as last predefined formation if it's not custom
+    if (selectedFormation.value !== 'Personalizado') {
+      lastPredefinedFormation.value = selectedFormation.value;
     }
 
     selectedFormation.value = newFormation;
@@ -347,9 +457,79 @@ function useDemoBuilder() {
 
     // Switch to custom formation
     if (selectedFormation.value !== 'Personalizado') {
+      lastPredefinedFormation.value = selectedFormation.value;
       selectedFormation.value = 'Personalizado';
       isCustomFormation.value = true;
     }
+  };
+
+  const startFieldPlayerDrag = (player: PlayerDto | null, positionId: string, isEmpty = false) => {
+    draggedFromField.value = { player, positionId, isEmpty };
+    draggedPlayer.value = null; // Clear any sidebar drag state
+  };
+
+  const endFieldPlayerDrag = () => {
+    draggedFromField.value = null;
+  };
+
+  const moveFieldPlayerToCustomCoordinates = (x: number, y: number) => {
+    if (!draggedFromField.value) return;
+    const { positionId } = draggedFromField.value;
+
+    // If dragging a slot, move the original slot to new coordinates
+    // Store new custom coordinates for the existing slot (don't create new ID)
+    customPlayerPositions.value[positionId] = { x, y };
+
+    // Switch to custom formation if not already
+    if (selectedFormation.value !== 'Personalizado') {
+      lastPredefinedFormation.value = selectedFormation.value;
+      selectedFormation.value = 'Personalizado';
+      isCustomFormation.value = true;
+    }
+
+    // Reset dragged state
+    draggedFromField.value = null;
+  };
+
+  const moveFieldPlayerToPosition = (targetPositionId: string) => {
+    if (!draggedFromField.value || draggedFromField.value?.positionId === targetPositionId) return;
+    const { player, positionId: sourcePositionId, isEmpty } = draggedFromField.value;
+
+    // Check if target position is occupied
+    const targetPlayer = lineup.value[targetPositionId];
+
+    const updatedLineup = { ...lineup.value };
+
+    // Handle empty slot drag - just move the slot without affecting players
+    if (isEmpty || !player) {
+      // For empty slots, we don't need to move anything in the lineup
+      // The visual position change will be handled by the coordinates
+      draggedFromField.value = null;
+      return;
+    }
+
+    // Remove player from source position
+    delete updatedLineup[sourcePositionId];
+
+    // If source was custom position, remove its coordinates
+    if (customPlayerPositions.value[sourcePositionId]) {
+      const updatedCustomPositions = { ...customPlayerPositions.value };
+      delete updatedCustomPositions[sourcePositionId];
+      customPlayerPositions.value = updatedCustomPositions;
+    }
+
+    // If target position is occupied, swap players
+    if (targetPlayer) {
+      updatedLineup[sourcePositionId] = targetPlayer;
+    }
+
+    // Place dragged player in target position
+    updatedLineup[targetPositionId] = player;
+
+    lineup.value = updatedLineup;
+
+    // Reset dragged state
+    draggedFromField.value = null;
   };
 
   return {
@@ -357,6 +537,7 @@ function useDemoBuilder() {
     lineup,
     bench,
     draggedPlayer,
+    draggedFromField,
     selectedCurrency,
     budgetAmount,
     remainingBudget,
@@ -368,6 +549,7 @@ function useDemoBuilder() {
     selectedLeagueValue,
     customPlayerPositions,
     isCustomFormation,
+    lastPredefinedFormation,
 
     // Computed
     currentCurrency,
@@ -392,10 +574,15 @@ function useDemoBuilder() {
     getBenchPlayer,
     selectPlayer,
     canSelectPlayer,
+    isPlayerInPosition,
     getPlayerAlert,
     dropPlayerAtCustomCoordinates,
     changeFormation,
     movePlayerToCustomPosition,
+    startFieldPlayerDrag,
+    endFieldPlayerDrag,
+    moveFieldPlayerToCustomCoordinates,
+    moveFieldPlayerToPosition,
   };
 }
 

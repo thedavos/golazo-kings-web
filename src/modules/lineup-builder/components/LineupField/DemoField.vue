@@ -40,6 +40,8 @@
         @add="handleFieldSlotClick"
         @deselect="handleFieldDeselect"
         @drop="handleFieldDrop"
+        @dragstart="handleFieldPlayerDragStart"
+        @dragend="handleFieldPlayerDragEnd"
         @update:salary="emit('update:salary', pos.id, 'field', $event)"
       />
     </div>
@@ -69,6 +71,7 @@
           :selected="slot.id === selectedSlot"
           :position-dimension="positionDimension"
           :formatter="formatter"
+          :is-dragging="false"
           @remove="handleBenchRemove"
           @swap="handleSwapToField"
           @add="handleBenchSlotClick"
@@ -175,6 +178,9 @@ const emit = defineEmits([
   'deselectBenchSlot',
   'dropFieldPlayer',
   'dropPlayerAtCoordinates',
+  'fieldPlayerDragStart',
+  'fieldPlayerDragEnd',
+  'moveFieldPlayerToPosition',
   'update:salary',
 ]);
 
@@ -234,7 +240,9 @@ const positionDimension = computed<number>(() => {
 
 // Methods
 const handleFieldDrop = (positionId: string, position: PlayerPositionAbbreviation) => {
+  // Check if this is a field-to-field move or sidebar-to-field drop
   emit('dropFieldPlayer', positionId, position);
+  emit('moveFieldPlayerToPosition', positionId);
 };
 
 const handleBenchDrop = (slotId: string) => {
@@ -277,20 +285,33 @@ const autoFillBench = () => {
   emit('autoFillBench');
 };
 
-const handleFieldFreeDrop = (e: DragEvent) => {
-  e.preventDefault();
+const handleFieldFreeDrop = (event: DragEvent) => {
+  event.preventDefault();
 
   const fieldElement = field.value;
   if (!fieldElement) return;
 
   const rect = fieldElement.getBoundingClientRect();
-  const x = ((e.clientX - rect.left) / rect.width) * 100;
-  const y = ((e.clientY - rect.top) / rect.height) * 100;
 
-  // Constrain coordinates to field boundaries (with some padding)
-  const constrainedX = Math.max(5, Math.min(95, x));
-  const constrainedY = Math.max(5, Math.min(95, y));
+  const x = ((event.clientX - rect.left) / rect.width) * 100;
+  const y = ((event.clientY - rect.top) / rect.height) * 100;
 
-  emit('dropPlayerAtCoordinates', constrainedX, constrainedY);
+  // const constrainedX = Math.round(Math.max(5, Math.min(95, x)));
+  // const constrainedY = Math.round(Math.max(5, Math.min(95, y)));
+
+  emit('dropPlayerAtCoordinates', Math.round(x), Math.round(y));
+};
+
+const handleFieldPlayerDragStart = (dragData: {
+  player: PlayerDto | null;
+  positionId: string;
+  sourceType: string;
+  isEmpty?: boolean;
+}) => {
+  emit('fieldPlayerDragStart', dragData);
+};
+
+const handleFieldPlayerDragEnd = () => {
+  emit('fieldPlayerDragEnd');
 };
 </script>
