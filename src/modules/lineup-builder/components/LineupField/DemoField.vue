@@ -24,10 +24,11 @@
       </div>
 
       <!-- Player positions -->
-      <lineup-position-mini
+      <player-slot
         v-for="pos in fieldPositions"
         :key="pos.id"
-        :field-position="pos"
+        type="field"
+        :position="pos"
         :position-dimension="positionDimension"
         :player="lineup[pos.id]"
         :is-kings="isKings"
@@ -53,9 +54,10 @@
       </div>
 
       <div class="grid grid-cols-5 gap-4">
-        <lineup-bench-slot
+        <player-slot
           v-for="(slot, index) in benchSlots"
           :key="`bench-${index}`"
+          type="bench"
           :bench-slot="slot"
           :player="bench[slot.id]"
           :selected-league="selectedLeague"
@@ -66,7 +68,7 @@
           :position-dimension="positionDimension"
           :formatter="formatter"
           @remove="handleBenchRemove"
-          @swap-to-field="handleSwapToField"
+          @swap="handleSwapToField"
           @add="handleBenchSlotClick"
           @drop="handleBenchDrop"
           @deselect="handleBenchDeselect"
@@ -135,8 +137,7 @@
 
 <script setup lang="ts">
 import { computed, useTemplateRef } from 'vue';
-import { LineupPositionMini } from 'src/modules/lineup-builder/components/LineupPosition';
-import { LineupBenchSlot } from 'src/modules/lineup-builder/components/LineupBenchSlot';
+import { PlayerSlot } from 'src/modules/lineup-builder/components/PlayerSlot';
 import { LEAGUE_OPTION_DEFAULT as leagueOptionDefault } from 'src/modules/home/components/HomeDemoBuilder';
 import { PlayerPositionAbbreviation } from 'src/modules/players/domain/value-objects/player-position.enum';
 import { BENCH_SLOTS as benchSlots } from './constants';

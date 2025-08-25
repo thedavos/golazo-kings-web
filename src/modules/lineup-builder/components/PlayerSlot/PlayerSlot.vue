@@ -1,9 +1,13 @@
 <template>
   <div
     :class="[
-      'relative rounded-lg border-2 border-slate-500/50 transition-all duration-200 min-h-[80px] flex flex-col items-center justify-center p-2 cursor-pointer',
+      'p-2 cursor-pointer border-2 transition-all rounded-lg duration-200',
+      type === 'field'
+        ? 'absolute transform -translate-x-1/2 -translate-y-1/2 w-auto md:min-w-24'
+        : 'relative border-slate-500/50 min-h-[80px] flex flex-col items-center justify-center',
       player || selected ? 'border-solid bg-gray-900' : 'border-dashed bg-gray-800',
     ]"
+    :style="type === 'field' ? { left: `${position?.x}%`, top: `${position?.y}%` } : {}"
     @dragover.prevent
     @drop="handleDrop"
     @click="handleClick"
@@ -11,42 +15,42 @@
     <q-menu
       v-if="player"
       class="border border-slate-500 rounded-borders bg-gray-800"
-      anchor="bottom right"
-      self="bottom left"
+      :anchor="type === 'field' ? 'top right' : 'bottom right'"
+      :self="type === 'field' ? 'top left' : 'bottom left'"
       :offset="[5, 0]"
     >
       <q-list bordered dense separator>
-        <!--        <q-item clickable>-->
-        <!--          <q-item-section>Ver jugador</q-item-section>-->
-        <!--        </q-item>-->
-        <!--        <q-item clickable>-->
-        <!--          <q-item-section>Mover jugador</q-item-section>-->
-        <!--        </q-item>-->
-        <q-item clickable @click="showSwapDialog = true">
+        <q-item v-if="type === 'bench'" clickable @click="showSwapDialog = true">
           <q-item-section>Intercambiar jugador</q-item-section>
         </q-item>
         <q-item clickable @click="showSalaryDialog = true">
           <q-item-section>Editar salario</q-item-section>
         </q-item>
-        <!--        <q-item clickable>-->
-        <!--          <q-item-section>Editar rating</q-item-section>-->
-        <!--        </q-item>-->
         <q-item clickable @click="handleRemove">
           <q-item-section>Quitar jugador</q-item-section>
         </q-item>
       </q-list>
     </q-menu>
 
-    <!-- Player in bench slot -->
+    <!-- Player assigned to slot -->
     <div v-if="player" class="w-full">
       <div
         :style="{ width: `${positionDimension}px`, height: `${positionDimension}px` }"
         :class="[
-          'mx-auto rounded-full flex items-center justify-center cursor-pointer hover:scale-105 transition-transform border-2 shadow-md',
+          'mx-auto rounded-full flex items-center justify-center cursor-pointer transition-transform border-2 shadow-md',
+          type === 'bench' ? 'hover:scale-105' : '',
           isKings ? 'from-yellow-300 to-yellow-600' : 'from-blue-300 to-blue-600',
         ]"
       >
-        <span class="text-xs font-bold text-white">{{ player.positionAbbreviation }}</span>
+        <q-avatar
+          v-if="player.profileImageUrl && type === 'field'"
+          rounded
+          size="lg"
+          class="overflow-hidden"
+        >
+          <q-img :src="player.profileImageUrl" fit="cover" />
+        </q-avatar>
+        <span v-else class="text-xs font-bold text-white">{{ player.positionAbbreviation }}</span>
       </div>
 
       <div
@@ -63,15 +67,30 @@
       </div>
     </div>
 
-    <!-- Empty bench slot -->
-    <div v-else class="text-center">
+    <!-- Empty slot -->
+    <div
+      v-else
+      :class="
+        type === 'field' ? 'flex column items-center justify-center text-center' : 'text-center'
+      "
+    >
       <div
         :style="{ width: `${positionDimension}px`, height: `${positionDimension}px` }"
-        class="mx-auto rounded-full border-2 border-dashed border-white/50 flex items-center justify-center bg-black/10 transition-colors ease-in cursor-pointer"
+        :class="[
+          'rounded-full border-2 border-dashed border-white/50 flex items-center justify-center bg-black/10 transition-colors ease-in',
+          type === 'field' ? 'text-center' : 'mx-auto cursor-pointer',
+        ]"
       >
-        <q-icon name="fa fa-plus" class="text-slate-400" size="sm" />
+        <q-icon class="text-slate-400" name="fas fa-plus" size="sm" />
       </div>
-      <div class="text-xs text-slate-400 mt-1">{{ benchSlot.label }}</div>
+
+      <p
+        v-if="type === 'field'"
+        class="hidden md:block text-xs font-medium text-slate-400 m-0 mt-1 p-0"
+      >
+        {{ position?.abbreviation }}
+      </p>
+      <div v-else class="text-xs text-slate-400 mt-1">{{ benchSlot?.label }}</div>
     </div>
 
     <player-edit-salary-dialog
@@ -81,8 +100,8 @@
       @update:salary="emit('update:salary', $event)"
     />
 
-    <!-- Swap Dialog -->
-    <q-dialog v-if="player" v-model="showSwapDialog" seamless>
+    <!-- Swap Dialog (only for bench) -->
+    <q-dialog v-if="player && type === 'bench'" v-model="showSwapDialog" seamless>
       <q-card class="bg-slate-800 text-white min-w-[300px]">
         <q-card-section class="pb-2">
           <div class="text-h6 flex items-center gap-2">
@@ -124,30 +143,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { computed, ref } from 'vue';
 import { PlayerEditSalaryDialog } from 'src/modules/players/dialogs/PlayerEditSalaryDialog';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
-import type { BenchSlot, FieldPositions } from 'src/modules/lineup-builder/components/LineupField';
+import type {
+  FieldPosition,
+  BenchSlot,
+  FieldPositions,
+} from 'src/modules/lineup-builder/components/LineupField';
 import type { LeagueOption } from 'src/modules/home/components/HomeDemoBuilder';
 
 interface Props {
-  benchSlot: BenchSlot;
+  type: 'field' | 'bench';
   player: PlayerDto | undefined;
-  selectedLeague: LeagueOption;
-  fieldPositions: FieldPositions;
-  fieldPlayer: Record<string, PlayerDto>;
+  positionDimension: number;
   isKings: boolean;
   selected: boolean;
-  positionDimension: number;
   formatter: (value: number) => string;
+  // Field-specific props
+  position?: FieldPosition;
+  // Bench-specific props
+  benchSlot?: BenchSlot;
+  selectedLeague?: LeagueOption;
+  fieldPositions?: FieldPositions;
+  fieldPlayer?: Record<string, PlayerDto>;
 }
 
 const props = defineProps<Props>();
 
-const emit = defineEmits(['drop', 'remove', 'swap-to-field', 'add', 'deselect', 'update:salary']);
+const emit = defineEmits(['drop', 'remove', 'add', 'deselect', 'update:salary', 'swap']);
 
-const showSwapDialog = ref(false);
 const showSalaryDialog = ref(false);
+const showSwapDialog = ref(false);
 
 // Computed
 const availableFieldPositions = computed(() => {
@@ -159,28 +186,39 @@ const displayName = computed(() =>
   fullName.value.length >= 14 ? props.player?.lastName : fullName.value,
 );
 
+// Methods
 const handleDrop = (e: Event) => {
   e.preventDefault();
-  emit('drop', props.benchSlot.id);
-};
-
-const handleRemove = () => {
-  emit('remove', props.benchSlot.id);
-};
-
-const handleSwap = (fieldPositionId: string) => {
-  emit('swap-to-field', props.benchSlot.id, fieldPositionId);
-  showSwapDialog.value = false;
+  if (props.type === 'field') {
+    emit('drop', props.position?.id, props.position?.abbreviation);
+  } else {
+    emit('drop', props.benchSlot?.id);
+  }
 };
 
 const handleClick = (e: Event) => {
+  e.preventDefault();
   if (props.player) return;
+
   if (props.selected) {
-    emit('deselect', props.benchSlot.id);
+    emit('deselect', props.type === 'field' ? props.position?.id : props.benchSlot?.id);
     return;
   }
 
-  e.preventDefault();
-  emit('add', props.benchSlot.id);
+  if (props.type === 'field') {
+    emit('add', props.position?.id, props.position?.abbreviation);
+  } else {
+    emit('add', props.benchSlot?.id);
+  }
+};
+
+const handleRemove = (e?: Event) => {
+  if (e) e.preventDefault();
+  emit('remove', props.type === 'field' ? props.position?.id : props.benchSlot?.id);
+};
+
+const handleSwap = (fieldPositionId: string) => {
+  emit('swap', props.benchSlot?.id, fieldPositionId);
+  showSwapDialog.value = false;
 };
 </script>
