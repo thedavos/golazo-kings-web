@@ -28,6 +28,10 @@ function useDemoBuilder() {
   const selectedSlotType = ref<'field' | 'bench'>('field');
   const draggedPlayer = ref<PlayerDto | null>(null);
 
+  // Custom positioning state
+  const customPlayerPositions = ref<Record<string, { x: number; y: number }>>({});
+  const isCustomFormation = ref(false);
+
   const $q = useQuasar();
 
   const demoPlayers = computed(() => {
@@ -55,7 +59,33 @@ function useDemoBuilder() {
     ];
   });
 
+  const lineupPlayers = computed(() => Object.values(lineup.value).filter(Boolean));
+
   const currentFieldPositions = computed(() => {
+    if (selectedFormation.value === 'Personalizado' || isCustomFormation.value) {
+      // Generate dynamic positions based on custom coordinates and assigned players
+      const positions = [];
+
+      for (const [positionId, player] of Object.entries(lineup.value)) {
+        if (
+          player &&
+          customPlayerPositions.value[positionId] &&
+          player.position &&
+          player.positionAbbreviation
+        ) {
+          positions.push({
+            id: positionId,
+            x: customPlayerPositions.value[positionId].x,
+            y: customPlayerPositions.value[positionId].y,
+            position: player.position,
+            abbreviation: player.positionAbbreviation,
+          });
+        }
+      }
+
+      return positions;
+    }
+
     return formationConfiguration[selectedFormation.value] || formationConfiguration['3-2-1'];
   });
 
@@ -208,6 +238,10 @@ function useDemoBuilder() {
     selectedSlotPosition.value = null;
   };
 
+  const canDropPlayer = (player: PlayerDto): boolean => {
+    return lineupPlayers.value.length < 7 && canSelectPlayer(player);
+  };
+
   const canSelectPlayer = (player: PlayerDto): boolean => {
     // Check if a player is already selected
     const isAlreadySelected = allSelectedPlayers.value.some((p) => p.id === player.id);
@@ -221,10 +255,10 @@ function useDemoBuilder() {
     return true;
   };
 
-  const selectPlayer = (player: PlayerDto, requiredPosition: PlayerPositionAbbreviation) => {
+  const selectPlayer = (player: PlayerDto) => {
     if (!canSelectPlayer(player))
       return $q.notify({
-        message: getPlayerAlert(player, requiredPosition),
+        message: getPlayerAlert(player),
         position: 'bottom-left',
         color: 'primary',
         timeout: 2500,
@@ -233,10 +267,11 @@ function useDemoBuilder() {
     onPlayerSelected(player);
   };
 
-  const getPlayerAlert = (
-    player: PlayerDto,
-    requiredPosition: PlayerPositionAbbreviation,
-  ): string => {
+  const getPlayerAlert = (player: PlayerDto): string => {
+    if (lineupPlayers.value.length >= 7) {
+      return 'El campo de juego solo puede tener 7 jugadores';
+    }
+
     const isAlreadySelected = allSelectedPlayers.value.some((p) => p.id === player.id);
     if (isAlreadySelected)
       return player.isQueensLeaguePlayer
@@ -247,11 +282,74 @@ function useDemoBuilder() {
     if (exceedsBudget)
       return `Te quedaste sin presupuesto para armar tu equipo, ajusta o descarta a ${player.isQueensLeaguePlayer ? 'alguna jugadora' : 'algún jugador'}`;
 
-    if (requiredPosition && player.positionAbbreviation !== requiredPosition) {
-      return `Posición incorrecta para ${player.isQueensLeaguePlayer ? 'la jugadora' : 'el jugador'}`;
+    return 'Disponible';
+  };
+
+  // Custom positioning methods
+  const dropPlayerAtCustomCoordinates = (x: number, y: number) => {
+    if (!draggedPlayer.value) return;
+    if (!canDropPlayer(draggedPlayer.value))
+      return $q.notify({
+        message: getPlayerAlert(draggedPlayer.value),
+        position: 'bottom-left',
+        color: 'primary',
+        timeout: 2500,
+      });
+
+    // Generate a unique position ID for custom positions
+    const customPositionId = `custom_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Add player to lineup
+    updateLineup(customPositionId, draggedPlayer.value);
+
+    // Store custom coordinates
+    customPlayerPositions.value[customPositionId] = { x, y };
+
+    // Switch to custom formation if not already
+    if (selectedFormation.value !== 'Personalizado') {
+      selectedFormation.value = 'Personalizado';
+      isCustomFormation.value = true;
     }
 
-    return 'Disponible';
+    // Reset dragged player
+    draggedPlayer.value = null;
+  };
+
+  const changeFormation = (newFormation: FormationName) => {
+    if (newFormation === 'Personalizado') {
+      // Don't allow direct selection of Personalizado
+      return;
+    }
+
+    selectedFormation.value = newFormation;
+    isCustomFormation.value = false;
+
+    // Clear custom positions when switching to predefined formation
+    customPlayerPositions.value = {};
+
+    // Move all players to new formation positions if they exist
+    const newPositions = formationConfiguration[newFormation];
+    const currentPlayers = Object.values(lineup.value).filter(Boolean);
+
+    // Clear current lineup
+    lineup.value = {};
+
+    // Reassign players to new formation positions
+    currentPlayers.forEach((player, index) => {
+      if (newPositions[index]) {
+        lineup.value[newPositions[index].id] = player;
+      }
+    });
+  };
+
+  const movePlayerToCustomPosition = (playerId: string, x: number, y: number) => {
+    customPlayerPositions.value[playerId] = { x, y };
+
+    // Switch to custom formation
+    if (selectedFormation.value !== 'Personalizado') {
+      selectedFormation.value = 'Personalizado';
+      isCustomFormation.value = true;
+    }
   };
 
   return {
@@ -268,6 +366,8 @@ function useDemoBuilder() {
     selectedSlotType,
     selectedFormation,
     selectedLeagueValue,
+    customPlayerPositions,
+    isCustomFormation,
 
     // Computed
     currentCurrency,
@@ -293,6 +393,9 @@ function useDemoBuilder() {
     selectPlayer,
     canSelectPlayer,
     getPlayerAlert,
+    dropPlayerAtCustomCoordinates,
+    changeFormation,
+    movePlayerToCustomPosition,
   };
 }
 

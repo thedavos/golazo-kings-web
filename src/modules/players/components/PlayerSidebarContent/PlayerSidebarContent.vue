@@ -71,13 +71,7 @@ import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 
 const emit = defineEmits(['close-sidebar']);
 
-const {
-  demoPlayers,
-  draggedPlayer,
-  selectedSlotPosition: requiredPosition,
-  selectPlayer,
-  resetSelectedSlot,
-} = useSharedDemoBuilder();
+const { demoPlayers, draggedPlayer, selectPlayer, resetSelectedSlot } = useSharedDemoBuilder();
 
 const {
   searchQuery,
@@ -91,7 +85,7 @@ const {
 } = useSharedPlayerSearch();
 
 const handlePlayerSelection = (player: PlayerDto) => {
-  selectPlayer(player, requiredPosition.value!);
+  selectPlayer(player);
 };
 
 const handleDragStart = (player: PlayerDto) => {

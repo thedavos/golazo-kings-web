@@ -95,12 +95,6 @@ onMounted(() => {
       .getPropertyValue('width')
       .replace('px', '');
 
-    console.log(
-      builderContainerPaddingLeft,
-      builderContainerMarginLeft,
-      builderConfigurationSectionWidth,
-    );
-
     leftDrawerWidth.value =
       Number(builderContainerPaddingLeft) +
       Number(builderContainerMarginLeft) +

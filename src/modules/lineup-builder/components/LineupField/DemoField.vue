@@ -5,6 +5,8 @@
       <div
         ref="field"
         class="absolute top-0 left-0 right-0 bottom-0 bg-inset-4 border-2 border-white/30 rounded-lg"
+        @dragover.prevent
+        @drop="handleFieldFreeDrop"
       >
         <!-- Goal areas -->
         <div
@@ -172,6 +174,7 @@ const emit = defineEmits([
   'deselectFieldSlot',
   'deselectBenchSlot',
   'dropFieldPlayer',
+  'dropPlayerAtCoordinates',
   'update:salary',
 ]);
 
@@ -272,5 +275,22 @@ const clearBench = () => {
 
 const autoFillBench = () => {
   emit('autoFillBench');
+};
+
+const handleFieldFreeDrop = (e: DragEvent) => {
+  e.preventDefault();
+
+  const fieldElement = field.value;
+  if (!fieldElement) return;
+
+  const rect = fieldElement.getBoundingClientRect();
+  const x = ((e.clientX - rect.left) / rect.width) * 100;
+  const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+  // Constrain coordinates to field boundaries (with some padding)
+  const constrainedX = Math.max(5, Math.min(95, x));
+  const constrainedY = Math.max(5, Math.min(95, y));
+
+  emit('dropPlayerAtCoordinates', constrainedX, constrainedY);
 };
 </script>
