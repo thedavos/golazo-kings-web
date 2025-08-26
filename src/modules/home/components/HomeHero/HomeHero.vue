@@ -34,7 +34,7 @@
           <!-- CTAs -->
           <div class="flex flex-col sm:flex-row gap-4 justify-start items-center">
             <q-btn class="bg-primary font-bold text-white rounded-lg" @click="onBuildSquad">
-              <q-icon name="fas fa-trophy" size="16px" class="mr-2" />
+              <q-icon name="fas fa-trophy" size="14px" class="mr-2" />
               Crear mi primera alineación
             </q-btn>
 
@@ -43,7 +43,7 @@
               class="bg-transparent text-white font-semibold rounded-lg"
               @click="onExplorePlayers"
             >
-              <q-icon name="fas fa-users" size="16px" class="mr-2" />
+              <q-icon name="fas fa-users" size="14px" class="mr-2" />
               Ver jugadores disponibles
             </q-btn>
           </div>
