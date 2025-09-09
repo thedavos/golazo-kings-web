@@ -11,7 +11,7 @@ export const HOME_TAB_ICON_SIZE = '16px';
 export const HOME_TABS_CONFIG: HomeTab[] = [
   {
     name: 'home',
-    icon: 'fa fa-crown',
+    icon: 'fa fa-chess-king',
     iconSize: HOME_TAB_ICON_SIZE,
     label: 'Inicio',
     to: '/',
@@ -30,18 +30,18 @@ export const HOME_TABS_CONFIG: HomeTab[] = [
     label: 'Crear alineación',
     to: '/lineups',
   },
-  {
-    name: 'guess-roster',
-    icon: 'fa fa-gamepad',
-    iconSize: HOME_TAB_ICON_SIZE,
-    label: 'Adivina la plantilla',
-    to: '/guess-roster',
-  },
-  {
-    name: 'budget-division',
-    icon: 'fa fa-money-bill',
-    iconSize: HOME_TAB_ICON_SIZE,
-    label: 'Reparto de salarios',
-    to: '/budget',
-  },
+  // {
+  //   name: 'guess-roster',
+  //   icon: 'fa fa-gamepad',
+  //   iconSize: HOME_TAB_ICON_SIZE,
+  //   label: 'Adivina la plantilla',
+  //   to: '/guess-roster',
+  // },
+  // {
+  //   name: 'budget-division',
+  //   icon: 'fa fa-money-bill',
+  //   iconSize: HOME_TAB_ICON_SIZE,
+  //   label: 'Reparto de salarios',
+  //   to: '/budget',
+  // },
 ];

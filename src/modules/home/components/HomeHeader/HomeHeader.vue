@@ -17,7 +17,7 @@
         <q-btn flat round icon="fa fa-bars" class="block md:hidden" @click="$emit('open-menu')" />
       </q-toolbar>
 
-      <q-toolbar inset class="hidden md:flex justify-center mt-2">
+      <q-toolbar inset class="hidden md:flex justify-center mt-3">
         <q-tabs
           v-model="activeTab"
           dense
