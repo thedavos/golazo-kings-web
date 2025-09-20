@@ -3,239 +3,125 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --color-go-blue: #0EA5E9;         /* Azul Golazo Kings principal */
-    --color-go-cyan: #06B6D4;         /* Cyan vibrante */
-    --color-go-purple: #8B5CF6;      /* Púrpura premium */
-    --color-go-green: #10B981;       /* Verde campo/éxito */
-    --color-go-gold: #bca967;         /* Oro premium */
-    --color-go-orange: #F97316;        /* Naranja leyenda */
-    --color-go-red: #EF4444;          /* Rojo competitivo */
-    --color-go-pink: #EC4899;        /* Rosa especial */
+    /* A) Primitive Colors */
+    --color-CB-100: #b597f5;
+    --color-CB-200: #a37df2;
+    --color-CB-300: #8c5def;
+    --color-CB-400: #6f34eb;
+    --color-CB-500: #592abc;
+    --color-CB-600: #472296;
+    --color-CB-700: #391b78;
 
-    /* Background System optimizado para claridad y funcionalidad */
-    --color-bg-primary: #061946;     /* Fondo principal más oscuro y saturado */
-    --color-bg-secondary: #1f3451;   /* Superficie secundaria */
-    --color-bg-tertiary: #2e4360;    /* Superficie terciaria */
-    --color-bg-card: #3d4e66;        /* Cards jugadores */
-    --color-bg-glass: rgba(46, 67, 96, 0.9);  /* Glass effect más visible */
-    --color-bg-field: #22C55E;       /* Verde campo más brillante */
-    --color-bg-pitch: #16A34A;       /* Verde césped equilibrado */
+    --color-MC-100: #eaeaea;
+    --color-MC-200: #969696;
+    --color-MC-300: #161616;
+    --color-MC-400: #0b0b0b;
 
-    /* Rating Colors específicos para cartas EA FC */
-    --color-rating-bronze: #CD7F32;   /* Bronce */
-    --color-rating-silver: #C0C0C0;  /* Plata */
-    --color-rating-gold: #F59E0B;     /* Oro */
-    --color-rating-inform: #8B5CF6;    /* Morado TOTW */
-    --color-rating-special: #EC4899;  /* Rosa especial */
-    --color-rating-icon: #06B6D4;     /* Cyan icono */
-    --color-rating-legend: #F97316;    /* Naranja leyenda */
+    --color-SF-100: #fafbfc;
+    --color-SF-200: #f3f6f8;
+    --color-SF-300: #eff3f6;
+    --color-SF-400: #ebf0f4;
+    --color-SF-500: #d5dce6;
+    --color-SF-600: #aab0b8;
+    --color-SF-700: #80848a;
 
-    /* Text Colors optimizados */
-    --color-text-primary: #FAFAFA;        /* Blanco principal */
-    --color-text-secondary: #CBD5E1; /* Gris secundario */
-    --color-text-muted: #64748B;     /* Texto atenuado */
-    --color-text-accent: var(--color-go-blue);    /* Texto de acento */
-    --color-text-success: var(--color-go-green);  /* Texto de éxito */
-    --color-text-warning: var(--color-go-gold);   /* Texto de advertencia */
-    --color-text-danger: var(--color-go-red);     /* Texto de peligro */
+    --color-RB-100: #ffa1a1;
+    --color-RB-200: #ff8989;
+    --color-RB-300: #ff6b6c;
+    --color-RB-400: #ff4647;
+    --color-RB-500: #cc3839;
+    --color-RB-600: #a32d2e;
+    --color-RB-700: #822425;
 
-    /* Font Families */
-    --font-family-inter: "Inter", "SF Pro Display", system-ui, -apple-system, sans-serif;
+    --color-Extended-Text: #232323;
+    --color-Extended-Banner: #37424f;
+    --color-Extended-Banner2: #6fb0d6;
+    --color-Extended-Graphics2: #07f468;
+    --color-Extended-Graphics3: #38f7ec;
+    --color-Extended-Sections: #131357;
+    --color-Extended-CompetitiveGaming: #a748ce;
+    --color-Extended-Graphics: #390085;
 
-    /* Gradientes optimizados para mejor visibilidad */
-    --gradient-go-primary: linear-gradient(135deg, var(--color-go-blue), var(--color-go-cyan), var(--color-go-purple));
-    --gradient-go-secondary: linear-gradient(145deg, var(--color-bg-card) 0%, var(--color-bg-secondary) 100%);
-    --gradient-field: linear-gradient(135deg, var(--color-bg-field), var(--color-bg-pitch));
-    --gradient-accent: linear-gradient(45deg, var(--color-go-blue), var(--color-go-green));
-    --gradient-pitch: linear-gradient(180deg, #22C55E 0%, #16A34A 50%, #15803D 100%);
-    --gradient-card-gold: linear-gradient(135deg, var(--color-go-gold), var(--color-go-orange), var(--color-go-gold));
-    --gradient-card-special: linear-gradient(135deg, var(--color-go-pink), var(--color-go-purple));
-    --gradient-card-icon: linear-gradient(135deg, var(--color-go-cyan), var(--color-go-blue));
-    --gradient-glass: linear-gradient(135deg, rgba(31, 52, 81, 0.15), rgba(46, 67, 96, 0.1));
-    --gradient-premium: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(249, 115, 22, 0.1));
-    --gradient-legend: linear-gradient(135deg, var(--color-go-orange), var(--color-go-red));
+    /* B) Semantic Colors */
+    --color-surface-default: var(--color-SF-100);
+    --color-surface-hovered: var(--color-SF-300);
+    --color-surface-selected: var(--color-SF-500);
+    --color-surface-commitment: #255af6;
 
-    /* Sombras mejoradas para diferentes elementos */
-    --shadow-glow-go-blue: 0 0 30px rgba(14, 165, 233, 0.4), 0 0 60px rgba(14, 165, 233, 0.2);
-    --shadow-glow-go-cyan: 0 0 30px rgba(6, 182, 212, 0.4), 0 0 60px rgba(6, 182, 212, 0.2);
-    --shadow-glow-purple: 0 0 30px rgba(139, 92, 246, 0.4);
-    --shadow-glow-gold: 0 0 30px rgba(245, 158, 11, 0.5), 0 0 60px rgba(245, 158, 11, 0.3);
-    --shadow-glow-green: 0 0 30px rgba(16, 185, 129, 0.4);
-    --shadow-glow-red: 0 0 30px rgba(239, 68, 68, 0.4);
+    --color-border-default: var(--color-MC-400);
+    --color-border-dropdown: var(--color-MC-200);
 
-    /* Sombras específicas para cartas */
-    --shadow-card-bronze: 0 8px 32px oklch(0.55 0.12 45 / 0.3),
-    0 4px 16px oklch(0.55 0.12 45 / 0.2);
-    --shadow-card-silver: 0 8px 32px oklch(0.78 0.02 240 / 0.3),
-    0 4px 16px oklch(0.78 0.02 240 / 0.2);
-    --shadow-card-gold: 0 12px 40px oklch(0.82 0.18 85 / 0.4),
-    0 8px 20px oklch(0.82 0.18 85 / 0.3);
-    --shadow-card-special: 0 12px 40px oklch(0.7 0.28 330 / 0.4),
-    0 8px 20px oklch(0.7 0.28 330 / 0.3);
-    --shadow-card-icon: 0 16px 48px oklch(0.8 0.25 200 / 0.5),
-    0 8px 24px oklch(0.8 0.25 200 / 0.3);
-    --shadow-card-legend: 0 20px 60px oklch(0.7 0.24 45 / 0.6),
-    0 12px 30px oklch(0.7 0.24 45 / 0.4);
+    --color-text-default: var(--color-MC-400);
+    --color-text-grey: var(--color-MC-200);
+    --color-text-highline: var(--color-RB-400);
+    
+    /* Semantic & Brand */
+    --color-SemanticAndBrand-Commitments: #255af6;
+    --color-SemanticAndBrand-EAstudios: var(--color-CB-400);
+    --color-SemanticAndBrand-EAtech: #07a3bc;
+    --color-SemanticAndBrand-BrandButtonsColortext: var(--color-RB-400);
 
-    /* Sombras generales optimizadas para fondos más claros */
-    --shadow-card: 0 10px 40px oklch(0.08 0.01 240 / 0.6),
-    0 4px 16px oklch(0.08 0.01 240 / 0.3);
-    --shadow-elevated: 0 20px 60px oklch(0.72 0.2 210 / 0.4),
-    0 8px 24px oklch(0.72 0.2 210 / 0.3);
-    --shadow-premium: 0 24px 80px oklch(0.82 0.18 85 / 0.5),
-    0 12px 32px oklch(0.82 0.18 85 / 0.4);
-    --shadow-glass: 0 8px 32px oklch(0.08 0.01 240 / 0.3),
-    inset 0 1px 0 oklch(0.98 0 0 / 0.15);
+    /* Effects */
+    --gradient-aurora: linear-gradient(135deg, #0D0F42, #FE4548);
+    --shadow-elev-10: 2px 12px 30px 0 rgba(0,0,0,.45);
 
-    /* Custom Colors for Tailwind compatibility - Actualizados */
-    --color-primary: var(--color-go-blue);
-    --color-primary-foreground: var(--color-text-primary);
-    --color-secondary: var(--color-bg-secondary);
-    --color-secondary-foreground: var(--color-text-primary);
-    --color-accent: var(--color-go-cyan);
-    --color-accent-foreground: var(--color-text-primary);
-    --color-background: var(--color-bg-primary);
-    --color-foreground: var(--color-text-primary);
-    --color-card: var(--color-bg-card);
-    --color-card-foreground: var(--color-text-primary);
-    --color-muted: var(--color-bg-tertiary);
-    --color-muted-foreground: var(--color-text-muted);
-    --color-border: oklch(0.42 0.05 225);        /* Border más visible */
-    --color-input: var(--color-bg-tertiary);
-    --color-ring: var(--color-go-blue);
-    --color-destructive: var(--color-go-red);
-    --color-destructive-foreground: var(--color-text-primary);
-    --color-popover: var(--color-bg-card);
-    --color-popover-foreground: var(--color-text-primary);
+    /* Spacing */
+    --spacing-cero: 0;
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.75rem;
+    --spacing-base: 1rem;
+    --spacing-md: 1.25rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 1.75rem;
+    --spacing-2xl: 2rem;
+    --spacing-3xl: 2.25rem;
+    --spacing-4xl: 2.5rem;
+    --spacing-5xl: 3rem;
+    --spacing-6xl: 3.5rem;
+    --spacing-7xl: 4rem;
+    --spacing-8xl: 6rem;
 
-    /* Animations mejoradas */
-    --animate-float-particle: float-particle 6s infinite linear;
-    --animate-pulse-glow: pulse-glow 2s ease-in-out infinite alternate;
-    --animate-border-flow: border-flow 3s ease infinite;
-    --animate-card-hover: card-hover 0.3s ease-out forwards;
-    --animate-field-glow: field-glow 3s ease-in-out infinite;
-    --animate-premium-pulse: premium-pulse 2.5s ease-in-out infinite;
+    /* Sizing */
+    --sizing-xs: 8px;
+    --sizing-sm: 12px;
+    --sizing-base: 16px;
+    --sizing-md: 20px;
+    --sizing-lg: 24px;
+    --sizing-xl: 28px;
+    --sizing-2xl: 32px;
 
-    /* Spacing & Sizing */
-    --radius: 1rem;
-    --card-radius: 1.2rem;
-    --field-radius: 0.8rem;
+    /* BorderRadius */
+    --radius-xxs: 2px;
+    --radius-sm: 8px;
+    --radius-base: 16px;
+    --radius-md: 20px;
 
-    /* Breakpoints para responsive design */
-    --breakpoint-sm: 640px;
-    --breakpoint-md: 768px;
-    --breakpoint-lg: 1024px;
-    --breakpoint-xl: 1280px;
-    --breakpoint-2xl: 1536px;
-}
+    /* Fonts */
+    --font-family-manrope: "Manrope", sans-serif;
+    --font-weight-regular: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
 
-@layer base {
-    * {
-        @apply border-border outline-ring/50;
-    }
-    html {
-        @apply scroll-smooth;
-    }
-    body {
-        @apply bg-background text-foreground min-h-screen;
-    }
-}
-
-
-@media (prefers-color-scheme: dark) {
-    @theme {
-        --color-bg-primary: oklch(0.15 0.02 240);     /* Más claro que antes */
-        --color-bg-secondary: oklch(0.22 0.03 240);   /* Mejor contraste */
-        --color-text-primary: oklch(0.98 0 0);        /* Blanco más suave */
-        --color-text-secondary: oklch(0.78 0.02 240); /* Mejor legibilidad */
-        --color-border: oklch(0.38 0.05 225);         /* Bordes más visibles */
-    }
-}
-
-@utility text-gradient-go {
-    background: linear-gradient(135deg, var(--color-go-blue), var(--color-go-cyan));
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    /* Fix para el recorte del gradiente: añade espacio inferior para el renderizado */
-    padding-bottom: 0.125em;
-    margin-bottom: -0.125em;
-}
-
-@utility text-gradient-gold {
-    background: linear-gradient(135deg, var(--color-go-gold), var(--color-go-orange));
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    /* Fix para el recorte del gradiente: añade espacio inferior para el renderizado */
-    padding-bottom: 0.125em;
-    margin-bottom: -0.125em;
-}
-
-@utility glass-go {
-    background: rgba(14, 165, 233, 0.1);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(14, 165, 233, 0.2);
-}
-
-@utility glass-premium {
-    background: rgba(251, 191, 36, 0.1);
-    backdrop-filter: blur(20px);
-    border: 1px solid rgba(251, 191, 36, 0.3);
-}
-
-@utility card-go {
-    background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(59, 130, 246, 0.05));
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(14, 165, 233, 0.2);
-    border-radius: 1.2rem;
-}
-
-@utility field-gradient {
-    background: linear-gradient(135deg, hsl(var(--color-bg-field)), hsl(var(--color-bg-pitch)));
-}
-
-@utility player-card {
-    position: relative;
-    border-radius: 1.2rem;
-    overflow: hidden;
-    transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
-
-    &:hover {
-        transform: translateY(-8px) scale(1.02);
-        box-shadow: 0 20px 40px rgba(14, 165, 233, 0.3);
-    }
-}
-
-@utility formation-grid {
-    display: grid;
-    gap: 1rem;
-    padding: 2rem;
-    background: var(--gradient-field);
-    border-radius: 0.8rem;
-    position: relative;
-
-    &::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        background: repeating-linear-gradient(
-                90deg,
-                transparent,
-                transparent 10px,
-                rgba(255, 255, 255, 0.1) 10px,
-                rgba(255, 255, 255, 0.1) 12px
-        );
-        pointer-events: none;
-    }
-}
-
-html {
-    color-scheme: light dark;
-}
-html.dark {
-    color-scheme: dark;
-}
-html.light {
-    color-scheme: light;
+    /* Standard colors for shadcn/ui compatibility */
+    --background: var(--color-surface-default);
+    --foreground: var(--color-text-default);
+    --card: var(--color-surface-default);
+    --card-foreground: var(--color-text-default);
+    --popover: var(--color-surface-default);
+    --popover-foreground: var(--color-text-default);
+    --primary: var(--color-RB-400);
+    --primary-foreground: var(--color-SF-100);
+    --secondary: var(--color-surface-hovered);
+    --secondary-foreground: var(--color-text-default);
+    --muted: var(--color-SF-300);
+    --muted-foreground: var(--color-text-grey);
+    --accent: var(--color-CB-400);
+    --accent-foreground: var(--color-SF-100);
+    --destructive: var(--color-RB-500);
+    --destructive-foreground: var(--color-SF-100);
+    --border: var(--color-border-default);
+    --input: var(--color-surface-hovered);
+    --ring: var(--color-CB-400);
+    --radius: var(--radius-base);
 }

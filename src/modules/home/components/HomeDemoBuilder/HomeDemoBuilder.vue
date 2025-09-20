@@ -1,16 +1,7 @@
 <template>
   <section class="pb-16">
     <div id="builder-container" class="container mx-auto px-6">
-      <div class="text-center mb-12">
-        <h2 class="text-4xl text-primary font-bold mb-4">Demo Interactivo</h2>
-        <p class="text-xl text-gray-300 mb-2">¡Prueba el constructor ahora sin registrarte!</p>
-        <p class="text-lg text-blue-400">
-          Forma tu plantilla completa con 7 titulares + 5 suplentes. Presupuesto:
-          {{ currentCurrency.formatter(budgetAmount) }}
-        </p>
-      </div>
-
-      <div class="grid lg:grid-cols-3 gap-4 max-w-7xl mx-auto">
+      <div class="grid lg:grid-cols-3 gap-4 mx-auto">
         <!-- Budget & Stats -->
         <div id="builder-configuration" class="lg:col-span-1 space-y-4">
           <q-card class="bg-slate-800/50 border border-blue-500/20 backdrop-blur-sm p-6">

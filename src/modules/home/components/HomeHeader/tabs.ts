@@ -1,7 +1,7 @@
 interface HomeTab {
   name: string;
-  icon: string;
-  iconSize: string;
+  icon?: string;
+  iconSize?: string;
   label?: string;
   to?: string;
 }
@@ -11,23 +11,20 @@ export const HOME_TAB_ICON_SIZE = '16px';
 export const HOME_TABS_CONFIG: HomeTab[] = [
   {
     name: 'home',
-    icon: 'fa fa-chess-king',
     iconSize: HOME_TAB_ICON_SIZE,
-    label: 'Inicio',
+    label: 'Crea tu alineación',
     to: '/',
   },
-  {
-    name: 'explore_players',
-    icon: 'fa fa-magnifying-glass',
-    iconSize: HOME_TAB_ICON_SIZE,
-    label: 'Buscar jugadores',
-    to: '/explore-players',
-  },
+  // {
+  //   name: 'explore_players',
+  //   iconSize: HOME_TAB_ICON_SIZE,
+  //   label: 'Buscar jugadores',
+  //   to: '/explore-players',
+  // },
   {
     name: 'lineup',
-    icon: 'fa fa-bullseye',
     iconSize: HOME_TAB_ICON_SIZE,
-    label: 'Crear alineación',
+    label: 'Mis alineaciones',
     to: '/lineups',
   },
   // {

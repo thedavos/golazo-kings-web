@@ -1,9 +1,7 @@
 <template>
-  <section
-    class="relative pt-[192px] md:pt-[8px] overflow-hidden top-[-125px] h-[calc(100vh+66px)] md:h-[calc(100vh+1px)]"
-  >
+  <section class="relative">
     <!-- Background -->
-    <div class="absolute inset-0">
+    <div class="absolute inset-0 brightness-50">
       <div
         class="absolute inset-0 bg-cover bg-center bg-no-repeat"
         :style="{ backgroundImage: `url(${heroBackground})` }"
@@ -26,7 +24,7 @@
           </h2>
 
           <p
-            class="text-lg lg:text-xl text-white mb-10 max-w-4xl mx-auto leading-relaxed text-center md:text-left"
+            class="text-lg lg:text-xl text-white mb-10 mx-auto leading-relaxed text-center md:text-left"
           >
             Gestiona salarios, compara jugadores y exporta tus lineups como un pro
           </p>

@@ -1,5 +1,5 @@
 <template>
-  <q-layout view="lHh lpR fff" class="min-h-screen bg-secondary text-white">
+  <q-layout view="lHh lpR fff" class="min-h-screen bg-surface-default text-white">
     <home-header @open-menu="drawerRight = true" />
 
     <q-page-container class="flex flex-col min-h-screen">
