@@ -35,6 +35,8 @@ export interface PlayerDto {
   league?: string | undefined | null;
   team?: string;
   teamId: number;
+  teamLogo?: string | undefined | null;
+  leagueId?: number | undefined | null;
   teamUuid: string;
   createdAt: string;
   updatedAt: string;

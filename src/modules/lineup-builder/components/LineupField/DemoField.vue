@@ -145,9 +145,9 @@ import { computed, useTemplateRef } from 'vue';
 import { PlayerSlot } from 'src/modules/lineup-builder/components/PlayerSlot';
 import { LEAGUE_OPTION_DEFAULT as leagueOptionDefault } from 'src/modules/home/components/HomeDemoBuilder';
 import { PlayerPositionAbbreviation } from 'src/modules/players/domain/value-objects/player-position.enum';
-import { BENCH_SLOTS as benchSlots } from './constants';
+import { BENCH_SLOTS as benchSlots } from 'src/modules/lineup-builder/constants/formation.constant';
 import type { LeagueOption } from 'src/modules/home/components/HomeDemoBuilder';
-import type { FieldPositions } from 'src/modules/lineup-builder/components/LineupField';
+import type { FieldPositions } from 'src/modules/lineup-builder/types';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 
 interface Props {

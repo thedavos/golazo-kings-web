@@ -1,5 +1,7 @@
 import { defineStore } from '#q-app/wrappers';
 import { createPinia } from 'pinia';
+import { createPersistedStatePlugin } from 'pinia-plugin-persistedstate-2';
+import localforage from 'localforage';
 
 /*
  * When adding new properties to stores, you should also
@@ -23,8 +25,18 @@ declare module 'pinia' {
  */
 
 export default defineStore((/* { ssrContext } */) => {
-  // You can add Pinia plugins here
-  // pinia.use(SomePiniaPlugin)
+  const pinia = createPinia();
 
-  return createPinia();
+  // Configurar persistencia con IndexedDB (via localforage)
+  pinia.use(
+    createPersistedStatePlugin({
+      storage: {
+        getItem: async (key) => localforage.getItem(key),
+        setItem: async (key, value) => localforage.setItem(key, value),
+        removeItem: async (key) => localforage.removeItem(key),
+      },
+    }),
+  );
+
+  return pinia;
 });

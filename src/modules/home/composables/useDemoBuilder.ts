@@ -6,13 +6,12 @@ import {
   CURRENCY_OPTIONS as currencyOptions,
   LEAGUE_OPTION_DEFAULT as leagueOptionDefault,
   LEAGUE_OPTIONS as leagueOptions,
-  kingsPlayersData,
-  queensPlayersData,
   type CurrencyOption,
   type LeagueOption,
 } from 'src/modules/home/components/HomeDemoBuilder';
+import { kingsPlayersData, queensPlayersData } from 'src/modules/home/data';
 import { findClosest } from 'src/modules/shared/utils/findClosest.util';
-import { FORMATION_CONFIGURATION as formationConfiguration } from 'src/modules/lineup-builder/components/LineupField';
+import { FORMATION_CONFIGURATION as formationConfiguration } from 'src/modules/lineup-builder/constants/formation.constant';
 import {
   PlayerPositionAbbreviation,
   PlayerPosition,
@@ -21,7 +20,7 @@ import type {
   FormationName,
   FieldPositions,
   FieldPosition,
-} from 'src/modules/lineup-builder/components/LineupField';
+} from 'src/modules/lineup-builder/types';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 
 function useDemoBuilder() {

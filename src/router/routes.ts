@@ -20,7 +20,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'lineups',
         path: '',
-        component: () => import('src/modules/lineup-builder/pages/LineupBuilderPage'),
+        component: () => import('src/modules/saved-lineups/pages/SavedLineupsPage/SavedLineupsPage.vue'),
       },
     ],
   },

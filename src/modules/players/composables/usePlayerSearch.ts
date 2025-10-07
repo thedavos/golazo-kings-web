@@ -3,14 +3,11 @@ import { createSharedComposable } from '@vueuse/core';
 import { debounce, throttle } from 'quasar';
 import { PlayerSearchEngine } from 'src/modules/shared/engines/PlayerSearchEngine';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
-
-// Tipos para mejor type safety
-interface SearchFilters {
-  position?: string;
-  team?: string;
-  isActive?: boolean;
-  minScore?: number;
-}
+import type { Filter } from 'src/modules/lineup-builder/types';
+import {
+  ORDER_BY_DEFAULT,
+  type OrderBySelectOption,
+} from 'src/modules/lineup-builder/constants/orderBy.constant';
 
 interface SearchState {
   query: string;
@@ -38,7 +35,8 @@ export function usePlayerSearch(
     enableWebWorker?: boolean;
     enableAnalytics?: boolean;
     cacheStrategy?: 'memory' | 'sessionStorage' | 'localStorage';
-    filters?: Ref<SearchFilters>;
+    filters?: Ref<Filter>;
+    sortBy?: Ref<OrderBySelectOption>;
   } = {},
 ) {
   const {
@@ -47,7 +45,8 @@ export function usePlayerSearch(
     maxSuggestions = 5,
     // enableAnalytics = false,
     cacheStrategy = 'memory',
-    filters = ref({}),
+    filters = ref({} as Filter),
+    sortBy = ref(ORDER_BY_DEFAULT), // Orden predeterminado: Nombre (A-Z)
   } = options;
 
   // Estado principal usando shallowRef para mejor performance con arrays grandes
@@ -68,78 +67,24 @@ export function usePlayerSearch(
   const searchHistory = ref<SearchHistory[]>([]);
   const recentSearches = ref<Set<string>>(new Set());
 
-  // Engine y worker
+  // Engine
   let searchEngine: PlayerSearchEngine | null = null;
-  let searchAbortController: AbortController | null = null;
 
-  // Cache estratégico con TTL
-  class SearchCache {
-    private cache: Map<string, { results: PlayerDto[]; timestamp: number }> = new Map();
-    private readonly maxSize = 100;
-    private readonly ttl = 5 * 60 * 1000; // 5 minutos
-
-    set(key: string, results: PlayerDto[]): void {
-      if (this.cache.size >= this.maxSize) {
-        const cacheEntries = [...this.cache.entries()];
-
-        const oldestKey = cacheEntries.sort((a, b) => a[1].timestamp - b[1].timestamp)[0]![0];
-        this.cache.delete(oldestKey);
-      }
-
-      this.cache.set(key, { results, timestamp: Date.now() });
-
-      // Persistir en storage si está configurado
-      if (cacheStrategy !== 'memory') {
-        this.persistToStorage(key, results);
-      }
-    }
-
+  // Cache opcional en storage (solo para persistencia entre sesiones)
+  // El cache principal está en PlayerSearchEngine
+  const storageCache = {
     get(key: string): PlayerDto[] | null {
-      const entry = this.cache.get(key);
-      if (!entry) {
-        // Intentar recuperar de storage
-        return this.retrieveFromStorage(key);
-      }
-
-      // Verificar TTL
-      if (Date.now() - entry.timestamp > this.ttl) {
-        this.cache.delete(key);
-        return null;
-      }
-
-      // Actualizar timestamp (LRU)
-      entry.timestamp = Date.now();
-      return entry.results;
-    }
-
-    private persistToStorage(key: string, results: PlayerDto[]): void {
-      try {
-        const storage = cacheStrategy === 'sessionStorage' ? sessionStorage : localStorage;
-        const cacheKey = `playerSearch_${key}`;
-        storage.setItem(
-          cacheKey,
-          JSON.stringify({
-            results: results.slice(0, 10), // Solo guardar top 10 para ahorrar espacio
-            timestamp: Date.now(),
-          }),
-        );
-      } catch (e) {
-        console.warn('No se pudo persistir cache:', e);
-      }
-    }
-
-    private retrieveFromStorage(key: string): PlayerDto[] | null {
       if (cacheStrategy === 'memory') return null;
 
       try {
         const storage = cacheStrategy === 'sessionStorage' ? sessionStorage : localStorage;
         const cacheKey = `playerSearch_${key}`;
         const data = storage.getItem(cacheKey);
-
         if (!data) return null;
 
         const parsed = JSON.parse(data);
-        if (Date.now() - parsed.timestamp > this.ttl) {
+        const ttl = 5 * 60 * 1000; // 5 minutos
+        if (Date.now() - parsed.timestamp > ttl) {
           storage.removeItem(cacheKey);
           return null;
         }
@@ -148,23 +93,34 @@ export function usePlayerSearch(
       } catch {
         return null;
       }
-    }
+    },
+
+    set(key: string, results: PlayerDto[]): void {
+      if (cacheStrategy === 'memory') return;
+
+      try {
+        const storage = cacheStrategy === 'sessionStorage' ? sessionStorage : localStorage;
+        const cacheKey = `playerSearch_${key}`;
+        storage.setItem(
+          cacheKey,
+          JSON.stringify({
+            results: results.slice(0, 10),
+            timestamp: Date.now(),
+          }),
+        );
+      } catch (e) {
+        console.warn('No se pudo persistir cache:', e);
+      }
+    },
 
     clear(): void {
-      this.cache.clear();
-      if (cacheStrategy !== 'memory') {
-        const storage = cacheStrategy === 'sessionStorage' ? sessionStorage : localStorage;
-        const keys = Object.keys(storage).filter((k) => k.startsWith('playerSearch_'));
-        keys.forEach((k) => storage.removeItem(k));
-      }
-    }
+      if (cacheStrategy === 'memory') return;
 
-    size(): number {
-      return this.cache.size;
-    }
-  }
-
-  const searchCache = new SearchCache();
+      const storage = cacheStrategy === 'sessionStorage' ? sessionStorage : localStorage;
+      const keys = Object.keys(storage).filter((k) => k.startsWith('playerSearch_'));
+      keys.forEach((k) => storage.removeItem(k));
+    },
+  };
 
   // Métricas y analytics
   // const trackSearch = (query: string, results: PlayerDto[], duration: number): void => {
@@ -217,93 +173,68 @@ export function usePlayerSearch(
     }
   };
 
+  // Inicializar engine cuando el navegador esté idle
   const initializeInChunks = async (players: PlayerDto[]): Promise<void> => {
-    const chunkSize = 1000;
-    const chunks = Math.ceil(players.length / chunkSize);
-
-    for (let i = 0; i < chunks; i++) {
-      await new Promise((resolve) => {
-        requestIdleCallback(
-          () => {
-            if (i === 0) {
-              searchEngine = new PlayerSearchEngine(players);
-            }
-            resolve(undefined);
-          },
-          { timeout: 50 },
-        );
-      });
-    }
+    return new Promise((resolve) => {
+      requestIdleCallback(
+        () => {
+          searchEngine = new PlayerSearchEngine(players);
+          resolve(undefined);
+        },
+        { timeout: 100 },
+      );
+    });
   };
 
-  // Pre-calentar cache con búsquedas comunes
+  // Pre-calentar cache con búsquedas comunes y realistas
   const preWarmCache = (): void => {
     if (!searchEngine) return;
 
-    const commonSearches = ['a', 'e', 'i', 'o', 'u']; // Vocales comunes
+    // Búsquedas más realistas que solo vocales
+    const commonSearches = ['mar', 'ron', 'mes', 'cris', 'leon'];
     requestIdleCallback(() => {
       commonSearches.forEach((query) => {
-        const results = searchEngine!.search(query);
-        searchCache.set(query, results.slice(0, maxResults));
+        // Solo ejecutar para poblar el cache interno del engine
+        searchEngine!.search(query);
+        // Storage cache opcional
+        const cacheKey = `${query.toLowerCase().trim()}_${JSON.stringify(filters.value)}`;
+        storageCache.set(cacheKey, searchEngine!.search(query).slice(0, maxResults));
       });
     });
   };
 
-  // Búsqueda principal con cancelación
-  const performSearch = async (query: string): Promise<PlayerDto[]> => {
+  // Búsqueda principal simplificada (síncrona)
+  const performSearch = (query: string): PlayerDto[] => {
     if (!searchEngine || !query.trim()) {
       return [];
     }
 
-    // Cancelar búsqueda anterior si existe
-    if (searchAbortController) {
-      searchAbortController.abort();
-    }
-    searchAbortController = new AbortController();
-
     const cacheKey = `${query.toLowerCase().trim()}_${JSON.stringify(filters.value)}`;
 
-    // Verificar cache
-    const cached = searchCache.get(cacheKey);
-    if (cached) {
+    // Verificar cache de storage primero
+    const cachedFromStorage = storageCache.get(cacheKey);
+    if (cachedFromStorage) {
       state.value.totalSearches++;
-      return cached;
+      return cachedFromStorage;
     }
 
     const startTime = performance.now();
 
     try {
-      // Simular async para permitir cancelación
-      const results = await new Promise<PlayerDto[]>((resolve, reject) => {
-        if (searchAbortController?.signal.aborted) {
-          reject(new Error('Búsqueda cancelada'));
-          return;
-        }
+      let searchResults: PlayerDto[];
 
-        requestAnimationFrame(() => {
-          try {
-            let searchResults: PlayerDto[];
+      // Usar búsqueda avanzada si hay filtros
+      if (Object.keys(filters.value).length > 0) {
+        searchResults = searchEngine.advancedSearch(query, filters.value, sortBy.value);
+      } else {
+        searchResults = searchEngine.search(query, sortBy.value);
+      }
 
-            // Usar búsqueda avanzada si hay filtros
-            if (Object.keys(filters.value).length > 0) {
-              searchResults = searchEngine!.advancedSearch(query, filters.value);
-            } else {
-              searchResults = searchEngine!.search(query);
-            }
-
-            resolve(searchResults.slice(0, maxResults));
-          } catch (e) {
-            const error = e as Error;
-            reject(error);
-          }
-        });
-      });
-
+      const results = searchResults.slice(0, maxResults);
       const duration = performance.now() - startTime;
 
-      // Guardar en cache y métricas
-      searchCache.set(cacheKey, results);
-      // trackSearch(query, results, duration);
+      // Persistir en storage si está configurado
+      storageCache.set(cacheKey, results);
 
       state.value.lastSearchTime = duration;
       state.value.totalSearches++;
@@ -316,18 +247,15 @@ export function usePlayerSearch(
       }
 
       return results;
-    } catch (e) {
-      const error = e as Error;
-      if (error.message !== 'Búsqueda cancelada') {
-        console.error('Error en búsqueda:', error);
-        state.value.error = error;
-      }
+    } catch (error) {
+      console.error('Error en búsqueda:', error);
+      state.value.error = error as Error;
       return [];
     }
   };
 
-  // Búsqueda con debounce mejorado
-  const debouncedSearch = debounce(async (query: string) => {
+  // Búsqueda con debounce optimizado
+  const debouncedSearch = debounce((query: string) => {
     if (!query.trim()) {
       state.value.results = [];
       state.value.showSuggestions = false;
@@ -338,7 +266,7 @@ export function usePlayerSearch(
     state.value.error = null;
 
     try {
-      const results = await performSearch(query);
+      const results = performSearch(query);
 
       // Solo actualizar si la query no ha cambiado
       if (state.value.query === query) {
@@ -353,24 +281,21 @@ export function usePlayerSearch(
           state.value.suggestions = [];
         }
       }
-    } catch (e) {
-      const error = e as Error;
-      if (error.message !== 'Búsqueda cancelada') {
-        state.value.error = error;
-        state.value.results = [];
-      }
+    } catch (error) {
+      state.value.error = error as Error;
+      state.value.results = [];
     } finally {
       state.value.isLoading = false;
     }
   }, debounceTime);
 
   // Búsqueda instantánea (sin debounce)
-  const instantSearch = async (query: string): Promise<void> => {
+  const instantSearch = (query: string): void => {
     state.value.query = query;
     state.value.isLoading = true;
 
     try {
-      state.value.results = await performSearch(query);
+      state.value.results = performSearch(query);
       state.value.showSuggestions = false;
     } finally {
       state.value.isLoading = false;
@@ -378,26 +303,37 @@ export function usePlayerSearch(
   };
 
   // Búsqueda throttled para scroll infinito
-  const throttledSearch = throttle(async (query: string) => {
-    const results = await performSearch(query);
+  const throttledSearch = throttle((query: string) => {
+    const results = performSearch(query);
     state.value.results = [...state.value.results, ...results];
   }, 500);
 
   // Aplicar sugerencia
-  const applySuggestion = async (suggestion: string): Promise<void> => {
+  const applySuggestion = (suggestion: string): void => {
     state.value.query = suggestion;
     state.value.showSuggestions = false;
-    await instantSearch(suggestion);
+    instantSearch(suggestion);
   };
 
   const clearEngine = (): void => {
     searchEngine = null;
-    searchAbortController = null;
-    searchCache.clear();
+    storageCache.clear();
     allPlayers.value = [];
     searchHistory.value = [];
     recentSearches.value = new Set();
     state.value.isInitialized = false;
+  };
+
+  const setPlayers = (players: PlayerDto[]): void => {
+    allPlayers.value = players;
+    // Reinicializar el search engine con los nuevos datos para reconstruir índices
+    if (searchEngine && state.value.isInitialized) {
+      searchEngine = new PlayerSearchEngine(players);
+      // Re-ejecutar búsqueda actual si existe para mostrar resultados actualizados
+      if (state.value.query.trim()) {
+        instantSearch(state.value.query);
+      }
+    }
   };
 
   // Limpiar búsqueda
@@ -408,37 +344,54 @@ export function usePlayerSearch(
     state.value.showSuggestions = false;
     state.value.isLoading = false;
     state.value.error = null;
-
-    // Cancelar búsquedas pendientes
-    if (searchAbortController) {
-      searchAbortController.abort();
-    }
   };
 
   // Refrescar cache
   const refreshCache = (): void => {
-    searchCache.clear();
+    storageCache.clear();
     if (searchEngine) {
       searchEngine.clearCaches();
     }
     preWarmCache();
   };
 
-  // Watchers optimizados
+  // Watchers optimizados con prevención de búsquedas redundantes
+  let lastFilterString = JSON.stringify(filters.value);
+
   watch(
     () => state.value.query,
-    (newQuery) => {
-      if (state.value.isInitialized) {
+    (newQuery, oldQuery) => {
+      // Solo buscar si cambió realmente y está inicializado
+      if (state.value.isInitialized && newQuery !== oldQuery) {
         debouncedSearch(newQuery);
       }
     },
   );
 
-  // Watch para filtros
+  // Watch para filtros con detección de cambios reales
   watch(
     filters,
-    () => {
-      if (state.value.query && state.value.isInitialized) {
+    (newFilters) => {
+      const newFilterString = JSON.stringify(newFilters);
+      // Solo buscar si los filtros realmente cambiaron
+      if (newFilterString !== lastFilterString && state.value.query && state.value.isInitialized) {
+        lastFilterString = newFilterString;
+        debouncedSearch(state.value.query);
+      }
+    },
+    { deep: true },
+  );
+
+  // Watch para sortBy - reejecutar búsqueda cuando cambie el orden
+  watch(
+    sortBy,
+    (newSort, oldSort) => {
+      // Solo si cambió realmente y hay query
+      if (
+        newSort.value !== oldSort?.value &&
+        state.value.query &&
+        state.value.isInitialized
+      ) {
         debouncedSearch(state.value.query);
       }
     },
@@ -459,11 +412,11 @@ export function usePlayerSearch(
   );
 
   const searchStats = computed(() => ({
-    cacheSize: searchCache.size(),
     totalSearches: state.value.totalSearches,
     lastSearchTime: state.value.lastSearchTime,
     recentSearches: Array.from(recentSearches.value),
     engineStats: searchEngine?.getStats() || null,
+    detailedEngineStats: searchEngine?.getDetailedStats() || null,
   }));
 
   const topSearches = computed(() => {
@@ -483,11 +436,7 @@ export function usePlayerSearch(
 
   // Cleanup
   onUnmounted(() => {
-    if (searchAbortController) {
-      searchAbortController.abort();
-    }
-
-    searchCache.clear();
+    storageCache.clear();
   });
 
   // API pública con readonly para prevenir mutaciones externas
@@ -514,6 +463,7 @@ export function usePlayerSearch(
     clearEngine,
     applySuggestion,
     refreshCache,
+    setPlayers,
 
     // Métodos avanzados
     throttledSearch,
@@ -525,11 +475,20 @@ export function usePlayerSearch(
 
     // Utilidades
     filters,
-    setFilters: (newFilters: SearchFilters) => {
+    setFilters: (newFilters: Filter) => {
       filters.value = { ...filters.value, ...newFilters };
     },
     clearFilters: () => {
       filters.value = {};
+    },
+
+    // Ordenamiento
+    sortBy,
+    setSortBy: (newSort: OrderBySelectOption) => {
+      sortBy.value = newSort;
+    },
+    resetSortBy: () => {
+      sortBy.value = ORDER_BY_DEFAULT;
     },
   };
 }
