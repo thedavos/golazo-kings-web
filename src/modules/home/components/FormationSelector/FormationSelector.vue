@@ -52,8 +52,8 @@
 
 <script setup lang="ts">
 import { computed } from 'vue';
-import { FORMATION_OPTIONS } from 'src/modules/lineup-builder/components/LineupField';
-import type { FormationName } from 'src/modules/lineup-builder/components/LineupField';
+import { CONST } from 'src/modules/lineup-builder/constants';
+import type { FormationName } from 'src/modules/lineup-builder/types';
 
 interface Props {
   selectedFormation: FormationName;
@@ -76,9 +76,9 @@ const emit = defineEmits<{
 }>();
 
 const formationOptions = computed<FormationOption[]>(() => {
-  return FORMATION_OPTIONS.map((option) => ({
+  return CONST.FORMATION.FORMATION_OPTIONS.map((option) => ({
     ...option,
-    value: option.value as FormationName,
+    value: option.value,
   }));
 });
 

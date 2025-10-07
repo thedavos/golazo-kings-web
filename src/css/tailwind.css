@@ -110,13 +110,13 @@
     --card-foreground: var(--color-text-default);
     --popover: var(--color-surface-default);
     --popover-foreground: var(--color-text-default);
-    --primary: var(--color-RB-400);
+    --primary: var(--color-CB-400);
     --primary-foreground: var(--color-SF-100);
     --secondary: var(--color-surface-hovered);
     --secondary-foreground: var(--color-text-default);
     --muted: var(--color-SF-300);
     --muted-foreground: var(--color-text-grey);
-    --accent: var(--color-CB-400);
+    --accent: var(--color-Extended-Graphics3);
     --accent-foreground: var(--color-SF-100);
     --destructive: var(--color-RB-500);
     --destructive-foreground: var(--color-SF-100);

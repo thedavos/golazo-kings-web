@@ -66,6 +66,8 @@ export class PlayerMapper {
       rating: player.rating || null,
       teamId: player.teamId,
       teamUuid: player.teamUuid,
+      teamLogo: '',
+      leagueId: 0,
       createdAt: player.createdAt!.toISOString(),
       updatedAt: player.updatedAt!.toISOString(),
     };

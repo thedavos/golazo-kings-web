@@ -1,9 +1,104 @@
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 import type { SearchResult } from './types';
+import type { Filter } from 'src/modules/lineup-builder/types';
+import type { OrderBySelectOption } from 'src/modules/lineup-builder/constants/orderBy.constant';
+
+// LRU Cache genérico con implementación real
+class LRUCache<K, V> {
+  private cache = new Map<K, V>();
+  private readonly maxSize: number;
+
+  constructor(maxSize: number) {
+    this.maxSize = maxSize;
+  }
+
+  get(key: K): V | undefined {
+    if (!this.cache.has(key)) {
+      return undefined;
+    }
+
+    // Mover al final (más reciente) para implementar LRU real
+    const value = this.cache.get(key)!;
+    this.cache.delete(key);
+    this.cache.set(key, value);
+    return value;
+  }
+
+  set(key: K, value: V): void {
+    // Si ya existe, eliminarlo para re-agregarlo al final
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+
+    // Si el cache está lleno, eliminar el menos usado (primero)
+    if (this.cache.size >= this.maxSize) {
+      const firstKey = this.cache.keys().next().value;
+      this.cache.delete(firstKey);
+    }
+
+    // Agregar al final (más reciente)
+    this.cache.set(key, value);
+  }
+
+  has(key: K): boolean {
+    return this.cache.has(key);
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+
+  get size(): number {
+    return this.cache.size;
+  }
+}
+
+// Algoritmo Soundex adaptado para español
+// Permite encontrar nombres aunque estén mal escritos ("Gonsalez" = "González")
+class SpanishSoundex {
+  private static readonly replacements: [RegExp, string][] = [
+    [/[aeiouáéíóúü]/gi, '0'],
+    [/[bp]/gi, '1'],
+    [/[fv]/gi, '2'],
+    [/[cgjkqsxz]/gi, '3'],
+    [/[dt]/gi, '4'],
+    [/[l]/gi, '5'],
+    [/[mnñ]/gi, '6'],
+    [/[r]/gi, '7'],
+  ];
+
+  static encode(text: string): string {
+    if (!text || text.length === 0) return '';
+
+    // Normalizar y convertir a minúsculas
+    let code = text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '');
+
+    // Guardar primera letra
+    const firstLetter = code[0];
+
+    // Aplicar reemplazos
+    for (const [pattern, replacement] of this.replacements) {
+      code = code.replace(pattern, replacement);
+    }
+
+    // Eliminar dígitos duplicados consecutivos
+    code = code.replace(/(\d)\1+/g, '$1');
+
+    // Eliminar ceros
+    code = code.replace(/0/g, '');
+
+    // Restaurar primera letra y tomar primeros 4 caracteres
+    code = firstLetter + code.substring(1);
+    return code.substring(0, 4).padEnd(4, '0');
+  }
+}
 
 class StringNormalizationCache {
   private cache = new Map<string, string>();
-  private readonly maxSize = 10000;
+  private readonly maxSize = 2000; // Optimizado para ~5000 items
 
   normalize(text: string): string {
     if (this.cache.has(text)) {
@@ -93,46 +188,25 @@ class Trie {
   }
 }
 
-// Pool de objetos para reducir garbage collection
-class SearchResultPool {
-  private pool: SearchResult[] = [];
-  private readonly maxPoolSize = 100;
-
-  acquire(player: PlayerDto, score: number, matchedFields: string[]): SearchResult {
-    const result = this.pool.pop() || { player: null!, score: 0, matchedFields: [] };
-    result.player = player;
-    result.score = score;
-    result.matchedFields = matchedFields;
-    return result;
-  }
-
-  release(result: SearchResult): void {
-    if (this.pool.length < this.maxPoolSize) {
-      result.matchedFields = [];
-      this.pool.push(result);
-    }
-  }
-
-  releaseAll(results: SearchResult[]): void {
-    results.forEach((r) => this.release(r));
-  }
-}
-
 export class PlayerSearchEngine {
   private readonly players: PlayerDto[];
   private searchIndex: Map<string, Set<number>>;
   private trie: Trie;
   private normalizationCache: StringNormalizationCache;
-  private resultPool: SearchResultPool;
 
   // Índices adicionales para búsquedas frecuentes
   private positionIndex: Map<string, Set<number>>;
   private teamIndex: Map<string, Set<number>>;
+  private leagueIndex: Map<string, Set<number>>;
+  private queensLeagueIndex: Set<number>;
+  private kingsLeagueIndex: Set<number>;
   private activePlayersIndex: Set<number>;
+  private aliasIndex: Map<string, number>; // Mapa de alias/apodos → índice de jugador
+  private soundexIndex: Map<string, Set<number>>; // Índice fonético para búsqueda tolerante a errores
+  private prefixIndex: Map<string, Set<number>>; // Índice de prefijos para búsqueda rápida
 
-  // Cache de búsquedas recientes (LRU)
-  private searchCache: Map<string, PlayerDto[]>;
-  private readonly maxCacheSize = 100;
+  // Cache de búsquedas recientes (LRU real)
+  private searchCache: LRUCache<string, PlayerDto[]>;
 
   // Pre-computados para evitar cálculos repetitivos
   private playerSearchableText: Map<number, string>;
@@ -143,11 +217,16 @@ export class PlayerSearchEngine {
     this.searchIndex = new Map();
     this.trie = new Trie();
     this.normalizationCache = new StringNormalizationCache();
-    this.resultPool = new SearchResultPool();
     this.positionIndex = new Map();
     this.teamIndex = new Map();
+    this.leagueIndex = new Map();
     this.activePlayersIndex = new Set();
-    this.searchCache = new Map();
+    this.queensLeagueIndex = new Set();
+    this.kingsLeagueIndex = new Set();
+    this.aliasIndex = new Map();
+    this.soundexIndex = new Map();
+    this.prefixIndex = new Map();
+    this.searchCache = new LRUCache(50); // LRU real optimizado para 5000 items
     this.playerSearchableText = new Map();
     this.levenshteinCache = new Map();
 
@@ -194,7 +273,12 @@ export class PlayerSearchEngine {
 
         // N-gramas para búsqueda parcial (solo para campos principales)
         if (field === player.firstName || field === player.lastName) {
-          this.addNGrams(normalized, index, 2, 3);
+          this.addNGrams(normalized, index, 2, 4); // 2, 3 y 4-gramas para mejor cobertura
+        }
+
+        // Prefijos para búsqueda rápida de autocompletado
+        if (field === player.firstName || field === player.lastName) {
+          this.addPrefixes(normalized, index, 3); // Prefijos desde 3 caracteres
         }
       });
 
@@ -215,9 +299,46 @@ export class PlayerSearchEngine {
         this.teamIndex.get(normalizedTeam)!.add(index);
       }
 
+      if (player.leagueId) {
+        const normalizedLeagueId = this.normalizationCache.normalize(String(player.leagueId));
+        if (!this.leagueIndex.has(normalizedLeagueId)) {
+          this.leagueIndex.set(normalizedLeagueId, new Set());
+        }
+        this.leagueIndex.get(normalizedLeagueId)!.add(index);
+      }
+
       if (player.isActive) {
         this.activePlayersIndex.add(index);
       }
+
+      if (player.isQueensLeaguePlayer) {
+        this.queensLeagueIndex.add(index);
+      } else {
+        this.kingsLeagueIndex.add(index);
+      }
+
+      // Índice de alias/apodos para coincidencias exactas
+      if (player.nickname) {
+        const normalizedNickname = this.normalizationCache.normalize(player.nickname);
+        this.aliasIndex.set(normalizedNickname, index);
+
+        // También agregar variaciones comunes (primera palabra del apodo)
+        const firstWord = normalizedNickname.split(' ')[0];
+        if (firstWord && firstWord.length > 2) {
+          this.aliasIndex.set(firstWord, index);
+        }
+      }
+
+      // Índice fonético (Soundex) para nombres y apellidos
+      [player.firstName, player.lastName].forEach((name) => {
+        if (name && name.length > 2) {
+          const soundexCode = SpanishSoundex.encode(name);
+          if (!this.soundexIndex.has(soundexCode)) {
+            this.soundexIndex.set(soundexCode, new Set());
+          }
+          this.soundexIndex.get(soundexCode)!.add(index);
+        }
+      });
     });
   }
 
@@ -237,6 +358,30 @@ export class PlayerSearchEngine {
   }
 
   /**
+   * Agrega prefijos al índice para búsqueda rápida de autocompletado
+   * Genera todos los prefijos desde minLength hasta la longitud completa
+   */
+  private addPrefixes(text: string, playerIndex: number, minLength: number = 3): void {
+    // Solo agregar prefijos si el texto es suficientemente largo
+    if (text.length < minLength) return;
+
+    for (let i = minLength; i <= text.length; i++) {
+      const prefix = text.substring(0, i);
+      if (!this.prefixIndex.has(prefix)) {
+        this.prefixIndex.set(prefix, new Set());
+      }
+      this.prefixIndex.get(prefix)!.add(playerIndex);
+    }
+  }
+
+  /**
+   * Busca jugadores por prefijo exacto
+   */
+  private searchByPrefix(query: string): Set<number> {
+    return this.prefixIndex.get(query) || new Set();
+  }
+
+  /**
    * Tokenización optimizada con cache
    */
   private tokenize(text: string): string[] {
@@ -244,6 +389,69 @@ export class PlayerSearchEngine {
       .replace(/[^\w\s]/g, ' ')
       .split(/\s+/)
       .filter((token) => token.length > 0);
+  }
+
+  /**
+   * Normaliza y tokeniza un query en un solo paso
+   */
+  private normalizeAndTokenize(query: string): { normalized: string; tokens: string[] } {
+    const normalized = this.normalizationCache.normalize(query);
+    const tokens = this.tokenize(normalized);
+    return { normalized, tokens };
+  }
+
+  /**
+   * Calcula el score de un jugador basado en múltiples factores
+   */
+  private calculatePlayerScore(
+    normalizedQuery: string,
+    queryTokens: Set<string>,
+    player: PlayerDto,
+    searchableText: string,
+    tokenBoostWeight: number = 0.5,
+  ): number {
+    // Calcular similitud usando texto pre-computado
+    const textSimilarity = this.calculateSimilarity(normalizedQuery, searchableText);
+
+    // Boost por coincidencia de tokens
+    const playerTokens = new Set(this.tokenize(searchableText));
+    const tokenOverlap = [...queryTokens].filter((t) => playerTokens.has(t)).length;
+    const tokenBoost =
+      queryTokens.size > 0 ? (tokenOverlap / queryTokens.size) * tokenBoostWeight : 0;
+
+    // Boost por jugador activo
+    const activeBoost = player.isActive ? 0.1 : 0;
+
+    return textSimilarity + tokenBoost + activeBoost;
+  }
+
+  /**
+   * Ordena resultados de búsqueda por score y criterios secundarios
+   */
+  private sortSearchResults(results: SearchResult[]): SearchResult[] {
+    return results.sort((a, b) => {
+      // Ordenar por score primero
+      if (Math.abs(b.score - a.score) > 0.01) {
+        return b.score - a.score;
+      }
+
+      // Priorizar jugadores activos
+      if (a.player.isActive !== b.player.isActive) {
+        return a.player.isActive ? -1 : 1;
+      }
+
+      // Orden alfabético como fallback
+      const nameA = `${a.player.firstName} ${a.player.lastName}`.toLowerCase();
+      const nameB = `${b.player.firstName} ${b.player.lastName}`.toLowerCase();
+      return nameA.localeCompare(nameB);
+    });
+  }
+
+  /**
+   * Filtra duplicados de un array de resultados
+   */
+  private filterDuplicates(results: SearchResult[], existingIds: Set<number>): SearchResult[] {
+    return results.filter((r) => !existingIds.has(r.player.id));
   }
 
   /**
@@ -291,8 +499,8 @@ export class PlayerSearchEngine {
     const distance = prevRow[len2];
 
     // Limitar tamaño del cache
-    if (this.levenshteinCache.size > 1000) {
-      // Limpiar cache cuando sea muy grande
+    if (this.levenshteinCache.size > 300) {
+      // Limpiar cache cuando sea muy grande (optimizado para ~5000 items)
       const firstKey = this.levenshteinCache.keys().next().value;
       this.levenshteinCache.delete(firstKey);
     }
@@ -356,12 +564,142 @@ export class PlayerSearchEngine {
   }
 
   /**
+   * Ordena una lista de jugadores según la configuración de ordenamiento
+   * Maneja correctamente valores null/undefined (siempre al final)
+   */
+  private sortPlayers(players: PlayerDto[], sortBy?: OrderBySelectOption): PlayerDto[] {
+    if (!sortBy) return players;
+
+    const sorted = [...players];
+
+    sorted.sort((a, b) => {
+      let valueA: string | number | null | undefined;
+      let valueB: string | number | null | undefined;
+
+      // Obtener valores según el campo
+      switch (sortBy.field) {
+        case 'name':
+          valueA = `${a.firstName} ${a.lastName}`.toLowerCase();
+          valueB = `${b.firstName} ${b.lastName}`.toLowerCase();
+          break;
+        case 'marketValue':
+          valueA = a.marketValue;
+          valueB = b.marketValue;
+          break;
+        case 'rating':
+          valueA = a.rating;
+          valueB = b.rating;
+          break;
+        default:
+          return 0;
+      }
+
+      // Manejar null/undefined: siempre al final
+      const isANullish = valueA === null || valueA === undefined;
+      const isBNullish = valueB === null || valueB === undefined;
+
+      if (isANullish && isBNullish) return 0;
+      if (isANullish) return 1; // A al final
+      if (isBNullish) return -1; // B al final
+
+      // Comparar valores válidos
+      let comparison = 0;
+      if (typeof valueA === 'string' && typeof valueB === 'string') {
+        comparison = valueA.localeCompare(valueB);
+      } else if (typeof valueA === 'number' && typeof valueB === 'number') {
+        comparison = valueA - valueB;
+      }
+
+      // Aplicar dirección de ordenamiento
+      return sortBy.direction === 'desc' ? -comparison : comparison;
+    });
+
+    return sorted;
+  }
+
+  /**
+   * Búsqueda directa en candidatos filtrados (sin reconstruir índices)
+   * Mucho más eficiente que crear un engine temporal
+   */
+  private searchInCandidates(
+    query: string,
+    candidateIndices: Set<number>,
+    sortBy?: OrderBySelectOption,
+  ): PlayerDto[] {
+    const { normalized, tokens } = this.normalizeAndTokenize(query);
+    const queryTokens = new Set(tokens);
+    const results: SearchResult[] = [];
+
+    // Buscar solo en los candidatos pre-filtrados
+    candidateIndices.forEach((index) => {
+      const player = this.players[index] as PlayerDto;
+      const searchableText = this.playerSearchableText.get(index)!;
+
+      const finalScore = this.calculatePlayerScore(
+        normalized,
+        queryTokens,
+        player,
+        searchableText,
+        0.5,
+      );
+
+      if (finalScore > 0.3) {
+        results.push({ player, score: finalScore, matchedFields: ['filtered'] });
+      }
+    });
+
+    // Ordenar resultados
+    this.sortSearchResults(results);
+
+    const topResults = results.slice(0, 20).map((r) => r.player);
+
+    // Aplicar ordenamiento personalizado si se especifica
+    return sortBy ? this.sortPlayers(topResults, sortBy) : topResults;
+  }
+
+  /**
+   * Búsqueda fonética usando Soundex
+   * Encuentra jugadores aunque el nombre esté mal escrito
+   */
+  private phoneticSearch(query: string): SearchResult[] {
+    const results: SearchResult[] = [];
+    const queryTokens = this.tokenize(query);
+
+    // Generar códigos soundex para cada token de la consulta
+    const querySoundexCodes = queryTokens
+      .filter((token) => token.length > 2)
+      .map((token) => SpanishSoundex.encode(token));
+
+    const candidateIndices = new Set<number>();
+
+    // Buscar jugadores con códigos soundex similares
+    querySoundexCodes.forEach((code) => {
+      const matches = this.soundexIndex.get(code);
+      if (matches) {
+        matches.forEach((idx) => candidateIndices.add(idx));
+      }
+    });
+
+    // Crear resultados con score moderado (menor que fuzzy)
+    candidateIndices.forEach((index) => {
+      const player = this.players[index] as PlayerDto;
+      results.push({
+        player,
+        score: 0.5, // Score moderado para búsqueda fonética
+        matchedFields: ['phonetic'],
+      });
+    });
+
+    return results;
+  }
+
+  /**
    * Búsqueda fuzzy optimizada con scoring mejorado
    */
   private fuzzySearch(query: string, threshold: number = 0.5): SearchResult[] {
     const results: SearchResult[] = [];
-    const normalizedQuery = this.normalizationCache.normalize(query);
-    const queryTokens = new Set(this.tokenize(normalizedQuery));
+    const { normalized, tokens } = this.normalizeAndTokenize(query);
+    const queryTokens = new Set(tokens);
 
     // Usar índice para pre-filtrar candidatos
     const candidates = new Set<number>();
@@ -379,21 +717,16 @@ export class PlayerSearchEngine {
       const player = this.players[index] as PlayerDto;
       const searchableText = this.playerSearchableText.get(index)!;
 
-      // Calcular score usando múltiples factores
-      const textSimilarity = this.calculateSimilarity(normalizedQuery, searchableText);
-
-      // Boost por coincidencia de tokens
-      const playerTokens = new Set(this.tokenize(searchableText));
-      const tokenOverlap = [...queryTokens].filter((t) => playerTokens.has(t)).length;
-      const tokenBoost = (tokenOverlap / queryTokens.size) * 0.3;
-
-      // Boost por jugador activo
-      const activeBoost = player.isActive ? 0.1 : 0;
-
-      const finalScore = textSimilarity + tokenBoost + activeBoost;
+      const finalScore = this.calculatePlayerScore(
+        normalized,
+        queryTokens,
+        player,
+        searchableText,
+        0.3,
+      );
 
       if (finalScore > threshold) {
-        results.push(this.resultPool.acquire(player, finalScore, ['fuzzy']));
+        results.push({ player, score: finalScore, matchedFields: ['fuzzy'] });
       }
     });
 
@@ -403,71 +736,116 @@ export class PlayerSearchEngine {
   /**
    * Búsqueda principal con cache y optimizaciones
    */
-  public search(query: string): PlayerDto[] {
+  public search(query: string, sortBy?: OrderBySelectOption): PlayerDto[] {
     if (!query || query.trim().length === 0) {
       return [];
     }
 
     const trimmedQuery = query.trim();
 
-    // Verificar cache
-    if (this.searchCache.has(trimmedQuery)) {
-      return this.searchCache.get(trimmedQuery)!;
+    // Verificar cache LRU (automáticamente lo mueve al final si existe)
+    const cachedResult = this.searchCache.get(trimmedQuery);
+    if (cachedResult) {
+      return cachedResult;
     }
 
-    const normalizedQuery = this.normalizationCache.normalize(trimmedQuery);
-    const queryTokens = this.tokenize(normalizedQuery);
+    const { normalized, tokens } = this.normalizeAndTokenize(trimmedQuery);
 
-    if (queryTokens.length === 0) {
+    if (tokens.length === 0) {
       return [];
     }
 
+    // Buscar coincidencia exacta de alias/apodo primero (boost máximo)
+    const aliasMatch = this.aliasIndex.get(normalized);
+    const aliasResults: SearchResult[] = [];
+    if (aliasMatch !== undefined) {
+      aliasResults.push({
+        player: this.players[aliasMatch]!,
+        score: 1.2, // Score más alto que exacta para priorizar
+        matchedFields: ['alias'],
+      });
+    }
+
+    // Búsqueda por prefijo (nueva estrategia para queries cortas)
+    const prefixResults: SearchResult[] = [];
+    if (normalized.length >= 3 && normalized.length <= 8) {
+      const prefixMatches = this.searchByPrefix(normalized);
+      if (prefixMatches.size > 0) {
+        Array.from(prefixMatches).forEach((index) => {
+          prefixResults.push({
+            player: this.players[index]!,
+            score: 1.1, // Score alto para prefijos
+            matchedFields: ['prefix'],
+          });
+        });
+      }
+    }
+
     // Búsqueda exacta
-    const exactMatches = this.exactSearch(queryTokens);
-    const exactResults = Array.from(exactMatches).map((index) =>
-      this.resultPool.acquire(this.players[index]!, 1.0, ['exact']),
+    const exactMatches = this.exactSearch(tokens);
+    const exactResults = Array.from(exactMatches).map((index) => ({
+      player: this.players[index]!,
+      score: 1.0,
+      matchedFields: ['exact'],
+    }));
+
+    // Filtrar duplicados de prefix en exact
+    const existingIdsAfterPrefix = new Set(
+      [...aliasResults, ...prefixResults].map((r) => r.player.id),
     );
+    const filteredExactResults = this.filterDuplicates(exactResults, existingIdsAfterPrefix);
 
     // Búsqueda fuzzy si es necesario
     let fuzzyResults: SearchResult[] = [];
-    if (exactResults.length < 10) {
-      fuzzyResults = this.fuzzySearch(trimmedQuery, 0.4);
+    if (aliasResults.length + prefixResults.length + filteredExactResults.length < 10) {
+      // Threshold más bajo para queries cortas
+      const threshold = normalized.length <= 4 ? 0.5 : 0.7;
+      fuzzyResults = this.fuzzySearch(trimmedQuery, threshold);
 
       // Filtrar duplicados
-      const exactPlayerIds = new Set(exactResults.map((r) => r.player.id));
-      fuzzyResults = fuzzyResults.filter((r) => !exactPlayerIds.has(r.player.id));
+      const existingIds = new Set(
+        [...aliasResults, ...prefixResults, ...filteredExactResults].map((r) => r.player.id),
+      );
+      fuzzyResults = this.filterDuplicates(fuzzyResults, existingIds);
     }
 
-    // Combinar y ordenar
-    const allResults = [...exactResults, ...fuzzyResults];
+    // Búsqueda fonética como último recurso (cuando hay pocos resultados)
+    let phoneticResults: SearchResult[] = [];
+    if (
+      aliasResults.length + prefixResults.length + filteredExactResults.length + fuzzyResults.length <
+      5
+    ) {
+      phoneticResults = this.phoneticSearch(trimmedQuery);
 
-    allResults.sort((a, b) => {
-      if (Math.abs(b.score - a.score) > 0.01) {
-        return b.score - a.score;
-      }
-
-      // Priorizar jugadores activos
-      if (a.player.isActive !== b.player.isActive) {
-        return a.player.isActive ? -1 : 1;
-      }
-
-      // Orden alfabético
-      const nameA = `${a.player.firstName} ${a.player.lastName}`.toLowerCase();
-      const nameB = `${b.player.firstName} ${b.player.lastName}`.toLowerCase();
-      return nameA.localeCompare(nameB);
-    });
-
-    const finalResults = allResults.slice(0, 20).map((r) => r.player);
-
-    // Actualizar cache (LRU)
-    if (this.searchCache.size >= this.maxCacheSize) {
-      const firstKey = this.searchCache.keys().next().value;
-      this.searchCache.delete(firstKey);
+      // Filtrar duplicados
+      const allExistingIds = new Set(
+        [...aliasResults, ...prefixResults, ...filteredExactResults, ...fuzzyResults].map(
+          (r) => r.player.id,
+        ),
+      );
+      phoneticResults = this.filterDuplicates(phoneticResults, allExistingIds);
     }
+
+    // Combinar y ordenar (alias > prefix > exacta > fuzzy > fonética)
+    const allResults = [
+      ...aliasResults,
+      ...prefixResults,
+      ...filteredExactResults,
+      ...fuzzyResults,
+      ...phoneticResults,
+    ];
+
+    this.sortSearchResults(allResults);
+
+    let finalResults = allResults.slice(0, 20).map((r) => r.player);
+
+    // Aplicar ordenamiento personalizado si se especifica
+    if (sortBy) {
+      finalResults = this.sortPlayers(finalResults, sortBy);
+    }
+
+    // Actualizar cache LRU (maneja automáticamente el límite de tamaño)
     this.searchCache.set(trimmedQuery, finalResults);
-
-    // Liberar objetos al pool
-    this.resultPool.releaseAll(allResults);
 
     return finalResults;
   }
@@ -475,41 +853,38 @@ export class PlayerSearchEngine {
   /**
    * Búsqueda avanzada optimizada con índices específicos
    */
-  public advancedSearch(
-    query: string,
-    filters: {
-      position?: string;
-      team?: string;
-      isActive?: boolean;
-      minScore?: number;
-    } = {},
-  ): PlayerDto[] {
+  public advancedSearch(query: string, filters: Filter, sortBy?: OrderBySelectOption): PlayerDto[] {
     // Comenzar con conjunto de todos los jugadores o filtrados
     let candidateIndices: Set<number>;
 
-    if (filters.position || filters.team || filters.isActive !== undefined) {
+    if (filters.position || filters.team || filters.league) {
       // Usar índices específicos para filtrado inicial
       const sets: Set<number>[] = [];
 
       if (filters.position) {
-        const normalizedPosition = this.normalizationCache.normalize(filters.position);
+        const normalizedPosition = this.normalizationCache.normalize(filters.position.value);
         const positionSet = this.positionIndex.get(normalizedPosition);
         if (positionSet) sets.push(positionSet);
       }
 
       if (filters.team) {
-        const normalizedTeam = this.normalizationCache.normalize(filters.team);
+        const normalizedTeam = this.normalizationCache.normalize(filters.team.label);
         const teamSet = this.teamIndex.get(normalizedTeam);
         if (teamSet) sets.push(teamSet);
       }
 
-      if (filters.isActive === true) {
-        sets.push(this.activePlayersIndex);
-      } else if (filters.isActive === false) {
-        const inactiveSet = new Set(
-          this.players.map((_, idx) => idx).filter((idx) => !this.activePlayersIndex.has(idx)),
-        );
-        sets.push(inactiveSet);
+      if (filters.league) {
+        const normalizedLeagueId = this.normalizationCache.normalize(String(filters.league.value));
+        const leagueSet = this.leagueIndex.get(normalizedLeagueId);
+        if (leagueSet) sets.push(leagueSet);
+      }
+
+      if (filters.league?.type === 'queens') {
+        sets.push(this.queensLeagueIndex);
+      }
+
+      if (filters.league?.type === 'kings') {
+        sets.push(this.kingsLeagueIndex);
       }
 
       // Intersección de todos los conjuntos
@@ -522,18 +897,22 @@ export class PlayerSearchEngine {
       candidateIndices = new Set(this.players.map((_, idx) => idx));
     }
 
-    // Filtrar players basado en índices candidatos
-    const filteredPlayers = Array.from(candidateIndices).map(
-      (idx) => this.players[idx],
-    ) as PlayerDto[];
-
-    // Crear un mini-engine temporal con jugadores filtrados
-    if (query && filteredPlayers.length > 0) {
-      const tempEngine = new PlayerSearchEngine(filteredPlayers);
-      return tempEngine.search(query);
+    // Buscar directamente en candidatos filtrados (sin reconstruir índices)
+    if (query && candidateIndices.size > 0) {
+      return this.searchInCandidates(query, candidateIndices, sortBy);
     }
 
-    return filteredPlayers.slice(0, 20);
+    // Sin query, devolver candidatos filtrados directamente con ordenamiento
+    let filteredResults = Array.from(candidateIndices)
+      .slice(0, 20)
+      .map((idx) => this.players[idx]) as PlayerDto[];
+
+    // Aplicar ordenamiento si se especifica
+    if (sortBy) {
+      filteredResults = this.sortPlayers(filteredResults, sortBy);
+    }
+
+    return filteredResults;
   }
 
   /**
@@ -563,14 +942,84 @@ export class PlayerSearchEngine {
   public getStats(): {
     totalPlayers: number;
     indexSize: number;
+    prefixIndexSize: number;
     cacheSize: number;
     activePlayers: number;
   } {
     return {
       totalPlayers: this.players.length,
       indexSize: this.searchIndex.size,
+      prefixIndexSize: this.prefixIndex.size,
       cacheSize: this.searchCache.size,
       activePlayers: this.activePlayersIndex.size,
     };
+  }
+
+  /**
+   * Obtiene estadísticas detalladas del motor de búsqueda
+   * Útil para debugging y monitoring de rendimiento
+   */
+  public getDetailedStats() {
+    return {
+      players: {
+        total: this.players.length,
+        active: this.activePlayersIndex.size,
+        inactive: this.players.length - this.activePlayersIndex.size,
+        queensLeague: this.queensLeagueIndex.size,
+        kingsLeague: this.kingsLeagueIndex.size,
+      },
+      indices: {
+        searchIndex: {
+          size: this.searchIndex.size,
+          tokens: this.searchIndex.size,
+        },
+        prefixIndex: {
+          size: this.prefixIndex.size,
+          description: 'Índice de prefijos para autocompletado rápido',
+        },
+        positions: this.positionIndex.size,
+        teams: this.teamIndex.size,
+        leagues: this.leagueIndex.size,
+        trieNodes: this.estimateTrieSize(),
+      },
+      caches: {
+        searches: {
+          size: this.searchCache.size,
+          maxSize: 50,
+          hitRate: 'N/A', // Podría implementarse con contadores
+        },
+        levenshtein: {
+          size: this.levenshteinCache.size,
+          maxSize: 300,
+        },
+        playerSearchableText: this.playerSearchableText.size,
+      },
+      memory: {
+        estimatedMB: this.estimateMemoryUsage(),
+      },
+    };
+  }
+
+  /**
+   * Estima el tamaño del árbol Trie (número aproximado de nodos)
+   */
+  private estimateTrieSize(): string {
+    // Estimación aproximada basada en el número de tokens
+    return `~${this.searchIndex.size * 2} nodos`;
+  }
+
+  /**
+   * Estima el uso de memoria del motor de búsqueda
+   */
+  private estimateMemoryUsage(): number {
+    // Estimaciones aproximadas en bytes
+    const searchIndexSize = this.searchIndex.size * 150; // Cada entrada ~150 bytes
+    const trieSize = this.searchIndex.size * 200; // Cada nodo Trie ~200 bytes
+    const playerTextSize = this.playerSearchableText.size * 100; // Cada texto ~100 bytes
+    const cacheSize = this.searchCache.size * 1000; // Cada resultado ~1KB
+    const levenshteinSize = this.levenshteinCache.size * 50; // Cada entrada ~50 bytes
+
+    const totalBytes = searchIndexSize + trieSize + playerTextSize + cacheSize + levenshteinSize;
+    return Math.round((totalBytes / 1024 / 1024) * 100) / 100; // MB con 2 decimales
   }
 }

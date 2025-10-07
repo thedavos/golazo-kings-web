@@ -7,7 +7,7 @@
           League y sus equipos pertenece a sus titulares. Su uso en este sitio es puramente para
           fines de entretenimiento.
         </p>
-        <div class="mt-2 sm:mt-3 text-[10px] sm:text-xs text-Extended-Text">
+        <div class="mt-2 sm:mt-3 text-[10px] sm:text-xs">
           Desarrollado con
           <span class="text-red-400 mx-1">❤️</span>
           para la comunidad de la Kings League

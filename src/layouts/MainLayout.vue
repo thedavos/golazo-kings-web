@@ -2,7 +2,7 @@
   <q-layout view="lHh lpR fff" class="min-h-screen bg-surface-default text-white">
     <home-header @open-menu="drawerRight = true" />
 
-    <q-page-container class="flex flex-col min-h-screen">
+    <q-page-container class="flex flex-col h-full">
       <div class="flex-1">
         <router-view />
       </div>
@@ -45,6 +45,9 @@
         <player-sidebar-content @close-sidebar="drawerLeft = false" />
       </q-scroll-area>
     </q-drawer>
+
+    <!-- Banner de consentimiento de cookies -->
+    <cookie-consent />
   </q-layout>
 </template>
 
@@ -57,6 +60,7 @@ import { HOME_TABS_CONFIG as tabs } from 'src/modules/home/components/HomeHeader
 import { HomeHeader } from 'src/modules/home/components/HomeHeader';
 import { HomeFooter } from 'src/modules/home/components/HomeFooter';
 import { PlayerSidebarContent } from 'src/modules/players/components/PlayerSidebarContent';
+import { CookieConsent } from 'src/modules/ads/components';
 
 const { drawerRight, drawerLeft } = useSharedMainLayout();
 const { width } = useWindowSize();

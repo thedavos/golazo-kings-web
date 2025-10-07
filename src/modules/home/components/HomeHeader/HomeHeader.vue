@@ -1,6 +1,6 @@
 <template>
   <q-header class="absolute bg-transparent">
-    <div class="flex flex-nowrap container mx-auto">
+    <div class="flex flex-nowrap">
       <q-toolbar>
         <q-toolbar-title class="flex items-center">
           <!--          <q-avatar>-->
@@ -12,18 +12,17 @@
         <q-btn flat round icon="fa fa-bars" class="block md:hidden" @click="$emit('open-menu')" />
       </q-toolbar>
 
-      <q-toolbar inset class="hidden md:flex justify-center items-center mt-3">
+      <q-toolbar class="hidden md:flex justify-end items-center">
         <q-tabs
           v-model="activeTab"
           dense
           no-caps
           inline-label
           narrow-indicator
-          content-class="text-2px"
           indicator-color="transparent"
           active-bg-color="transparent"
           active-class="text-primary"
-          class="text-dark bg-surface-default"
+          class="text-Extended-Text bg-surface-default font-semibold"
         >
           <q-route-tab v-for="tab in tabs" :key="tab.name" :name="tab.name" :to="tab.to">
             <q-icon v-if="tab.icon" :name="tab.icon" :size="tab.iconSize" />

@@ -1,29 +1,29 @@
 <template>
   <q-input
     v-model="searchQuery"
-    name="searchQuery"
     outlined
     dense
     rounded
     autofocus
+    name="searchQuery"
     placeholder="Nombre, posición o equipo..."
-    input-class="text-white"
-    bg-color="slate-800"
-    color="blue"
-    class="text-white w-full"
+    input-class="text-Extended-Text"
+    bg-color=""
+    color="primary"
     :loading="isLoading"
     @focus="onFocus"
     @blur="onBlur"
   >
     <template #prepend>
-      <q-icon name="fa fa-search" size="xs" color="white" class="mr-1" />
+      <q-icon name="la la-search" size="xs" color="primary" class="mr-1" />
     </template>
+
     <template v-if="searchQuery" #append>
       <q-icon
-        name="fa fa-close"
+        name="la la-close"
         size="xs"
         class="cursor-pointer"
-        color="white"
+        color="primary"
         @click="cleanQuery"
       />
     </template>
@@ -33,10 +33,8 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useSharedPlayerSearch } from 'src/modules/players/composables/usePlayerSearch';
-import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 
 interface Props {
-  players: PlayerDto[];
   isLoading: boolean;
 }
 

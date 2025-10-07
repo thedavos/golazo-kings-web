@@ -67,37 +67,7 @@
         </div>
 
         <div class="row mt-10">
-          <div class="col-8 mx-auto">
-            <!-- Players List -->
-            <div v-if="searchResults.length > 0" class="space-y-3 max-h-fit overflow-y-auto">
-              <h6>Jugadores encontrados</h6>
-              <player-card-mini
-                v-for="player in searchResults"
-                :key="player.id"
-                :player="player"
-                @click="selectPlayer(player)"
-              />
-            </div>
-
-            <!-- No Results Message -->
-            <q-banner v-else-if="hasNoResults" class="text-center bg-transparent py-12" rounded>
-              <p>No se encontraron jugadores para "{{ searchQuery }}"</p>
-              <template #action>
-                <div class="w-full mx-auto">
-                  <q-btn outline size="md" color="primary" label="Limpiar" @click="clearSearch" />
-                </div>
-              </template>
-            </q-banner>
-
-            <!-- Search Prompt -->
-            <div v-else class="text-center">
-              <q-icon name="fa fa-search" size="4rem" class="text-gray-500 mb-4" />
-              <div class="text-xl text-gray-400 mb-2">Busca un jugador</div>
-              <div class="text-sm text-gray-500">
-                Escribe el nombre, posición o equipo del jugador que buscas
-              </div>
-            </div>
-          </div>
+          <div class="col-8 mx-auto"></div>
         </div>
       </q-card-section>
     </q-card>
@@ -106,9 +76,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { useQuasar } from 'quasar';
 import { usePlayerSearch } from 'src/modules/players/composables/usePlayerSearch';
-import { PlayerCardMini } from 'src/modules/players/components/PlayerCard';
 import type { PlayerPosition } from 'src/modules/players/domain/value-objects/player-position.enum';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 
@@ -137,14 +105,10 @@ const {
   searchResults,
   suggestions,
   showSuggestions,
-  hasNoResults,
   initializeSearch,
   instantSearch,
   isLoading,
-  clearSearch,
 } = usePlayerSearch();
-
-const $q = useQuasar();
 
 void initializeSearch(props.players);
 
@@ -163,37 +127,9 @@ const isOpen = computed({
   set: (value) => emit('update:model-value', value),
 });
 
-// Methods
-const canSelectPlayer = (player: PlayerDto): boolean => {
-  // Check if player is already selected
-  const isAlreadySelected = props.selectedPlayers.some((p) => p.id === player.id);
-  if (isAlreadySelected) return false;
-
-  // Check budget
-  const exceedsBudget = (player.marketValue || 0) > props.remainingBudget;
-  if (exceedsBudget) return false;
-
-  // Check position compatibility (if required)
-  return !(props.requiredPosition && player.position !== props.requiredPosition);
-};
-
-const selectPlayer = (player: PlayerDto) => {
-  if (!canSelectPlayer(player))
-    return $q.notify({
-      message: getPlayerAlert(player),
-      position: 'top-right',
-      color: 'primary',
-      timeout: 2500,
-    });
-
-  emit('player-selected', player);
-  searchQuery.value = `${player.firstName} ${player.lastName}`;
-  closeDialog();
-};
-
-const selectSuggestion = async (suggestion: string) => {
+const selectSuggestion = (suggestion: string) => {
   searchQuery.value = suggestion;
-  await instantSearch(suggestion);
+  instantSearch(suggestion);
 };
 
 const closeDialog = () => {
@@ -201,20 +137,20 @@ const closeDialog = () => {
   searchQuery.value = '';
 };
 
-const getPlayerAlert = (player: PlayerDto): string => {
-  const isAlreadySelected = props.selectedPlayers.some((p) => p.id === player.id);
-  if (isAlreadySelected) return 'El jugador ya ha sido seleccionado en el campo o en la banca';
-
-  const exceedsBudget = (player.marketValue || 0) > props.remainingBudget;
-  if (exceedsBudget)
-    return 'Te quedaste sin presupuesto para armar tu equipo, ajusta o descarta a algún jugador';
-
-  if (props.requiredPosition && player.position !== props.requiredPosition) {
-    return 'Posición incorrecta para el jugador';
-  }
-
-  return 'Disponible';
-};
+// const getPlayerAlert = (player: PlayerDto): string => {
+//   const isAlreadySelected = props.selectedPlayers.some((p) => p.id === player.id);
+//   if (isAlreadySelected) return 'El jugador ya ha sido seleccionado en el campo o en la banca';
+//
+//   const exceedsBudget = (player.marketValue || 0) > props.remainingBudget;
+//   if (exceedsBudget)
+//     return 'Te quedaste sin presupuesto para armar tu equipo, ajusta o descarta a algún jugador';
+//
+//   if (props.requiredPosition && player.position !== props.requiredPosition) {
+//     return 'Posición incorrecta para el jugador';
+//   }
+//
+//   return 'Disponible';
+// };
 
 const onFocus = () => {
   isFocused.value = true;

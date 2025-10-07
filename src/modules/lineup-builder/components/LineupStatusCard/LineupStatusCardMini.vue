@@ -19,7 +19,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
-import type { FormationName } from 'src/modules/lineup-builder/components/LineupField';
+import type { FormationName } from 'src/modules/lineup-builder/types';
 
 interface Props {
   lineup: Record<string, PlayerDto>;

@@ -144,11 +144,7 @@ import { computed, ref } from 'vue';
 import { PlayerEditSalaryDialog } from 'src/modules/players/dialogs/PlayerEditSalaryDialog';
 import { getInitials } from 'src/modules/shared/utils/initials.util';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
-import type {
-  FieldPosition,
-  BenchSlot,
-  FieldPositions,
-} from 'src/modules/lineup-builder/components/LineupField';
+import type { FieldPosition, BenchSlot, FieldPositions } from 'src/modules/lineup-builder/types';
 import type { LeagueOption } from 'src/modules/home/components/HomeDemoBuilder';
 
 interface Props {

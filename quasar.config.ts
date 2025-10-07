@@ -3,6 +3,7 @@
 
 import { defineConfig } from '#q-app/wrappers';
 import { fileURLToPath } from 'node:url';
+import { name as appName, version as appVersion } from './package.json';
 
 export default defineConfig((ctx) => {
   return {
@@ -12,7 +13,7 @@ export default defineConfig((ctx) => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: ['i18n', 'axios'],
+    boot: ['google-consent', 'i18n', 'axios'],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ['font.css', 'tailwind.css', 'app.scss'],
@@ -21,13 +22,14 @@ export default defineConfig((ctx) => {
     extras: [
       // 'ionicons-v4',
       // 'mdi-v7',
-      'fontawesome-v6',
+      // 'fontawesome-v6',
       // 'eva-icons',
       // 'themify',
       // 'line-awesome',
       // 'roboto-font-latin-ext', // this or either 'roboto-font', NEVER both!
 
       // 'material-icons', // optional, you are not bound to it
+      'line-awesome',
     ],
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
@@ -52,7 +54,10 @@ export default defineConfig((ctx) => {
 
       // publicPath: '/',
       // analyze: true,
-      // env: {},
+      env: {
+        APP_VERSION: appVersion,
+        APP_NAME: appName,
+      },
       // rawDefine: {}
       // ignorePublicFolder: true,
       // minify: false,
@@ -115,12 +120,19 @@ export default defineConfig((ctx) => {
       // directives: [],
 
       // Quasar plugins
-      plugins: ['Notify', 'Dark'],
+      plugins: ['Notify', 'Dark', 'Dialog'],
     },
 
     // animations: 'all', // --- includes all animations
     // https://v2.quasar.dev/options/animations
-    animations: [],
+    animations: [
+      'fadeInRight', 
+      'fadeOutRight',
+      'slideInUp',
+      'slideOutDown',
+      'fadeIn',
+      'fadeOut'
+    ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#sourcefiles
     // sourceFiles: {

@@ -217,6 +217,7 @@ import {
 } from 'src/modules/home/components/HomeDemoBuilder';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 import type { PlayerPositionAbbreviation } from 'src/modules/players/domain/value-objects/player-position.enum';
+import type { FieldPosition } from 'src/modules/lineup-builder/types';
 
 interface Props {
   demoPlayers: PlayerDto[];
@@ -351,7 +352,7 @@ const handleSwapPlayers = (benchSlotId: string, fieldPositionId: string) => {
   const benchPlayer = bench.value[benchSlotId];
   const fieldPlayer = lineup.value[fieldPositionId];
 
-  const fieldPos = currentFieldPositions.value.find((p) => p.id === fieldPositionId);
+  const fieldPos = currentFieldPositions.value.find((p: FieldPosition) => p.id === fieldPositionId);
   if (benchPlayer && fieldPos && benchPlayer.position === fieldPos.position) {
     const newLineup = { ...lineup.value };
     const newBench = { ...bench.value };

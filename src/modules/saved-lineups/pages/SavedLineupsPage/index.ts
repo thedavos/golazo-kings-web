@@ -1,0 +1,1 @@
+export { default as SavedLineupsPage } from './SavedLineupsPage.vue';
