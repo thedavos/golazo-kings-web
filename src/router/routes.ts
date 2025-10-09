@@ -61,6 +61,18 @@ const routes: RouteRecordRaw[] = [
     ],
   },
 
+  {
+    path: '/privacy',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      {
+        name: 'privacy-policy',
+        path: '',
+        component: () => import('src/modules/shared/pages/PrivacyPolicyPage.vue'),
+      },
+    ],
+  },
+
   // Always leave this as last one,
   // but you can also remove it
   {
