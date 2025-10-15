@@ -20,7 +20,12 @@
         @click="openFileSelector"
       >
         <!-- Imagen actual -->
-        <q-img :src="displayImageUrl" :fit="imageFit" class="w-full h-full">
+        <q-img
+          class="w-full h-full"
+          :src="displayImageUrl"
+          :fit="imageFit"
+          :placeholder-src="fallbackImage"
+        >
           <template #loading>
             <div class="absolute-full flex items-center justify-center bg-gray-100">
               <q-spinner color="primary" size="md" />

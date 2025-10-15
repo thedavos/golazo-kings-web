@@ -18,6 +18,7 @@
               v-model="formData.profileImageUrl"
               hint-text="PNG, JPG hasta 5MB"
               image-fit="contain"
+              :fallback-image="emptyPlayerImage"
               :max-size-m-b="2"
             />
           </div>
@@ -53,7 +54,7 @@
             outlined
             label="Apodo"
             name="nickname"
-            hint="Ej: 'CR7', 'La Pulga', etc."
+            hint="Ej: 'Furby', 'El Camello', etc."
           />
 
           <!-- Market Value y Rating -->
@@ -176,6 +177,7 @@ import type { TeamSelectOption } from 'src/modules/lineup-builder/constants/team
 import { LIST_OPTIONS as LEAGUE_LIST } from 'src/modules/lineup-builder/constants/league.constant';
 import { useCustomEntitiesStore } from 'stores/useCustomEntitiesStore';
 import { useFeedback } from 'src/modules/shared/composables/useFeedback';
+import emptyPlayerImage from 'src/assets/player/empty-player.png';
 import type { LEAGUE_TYPES, SelectOption } from 'src/modules/lineup-builder/types';
 import type { CustomPlayer } from 'src/modules/lineup-builder/types/custom-entities.types';
 import type {
@@ -277,7 +279,7 @@ async function onSaveClick() {
       weight: null,
       isActive: true,
       marketValue: formData.marketValue || null,
-      profileImageUrl: formData.profileImageUrl || null,
+      profileImageUrl: formData.profileImageUrl || process.env.DEFAULT_EMPTY_PLAYER_IMAGE,
       position:
         (positionOptions.value.find((p) => p.abbreviation === formData.position)
           ?.value as PlayerPosition) || null,

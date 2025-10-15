@@ -14,127 +14,13 @@
           <div class="space-y-3">
             <div class="text-sm font-semibold text-gray-700 text-center">Foto del Jugador</div>
 
-            <!-- Input file (siempre presente, oculto) -->
-            <input
-              ref="fileInputRef"
-              type="file"
-              accept="image/*"
-              class="hidden"
-              @change="handleFileChange"
+            <image-uploader
+              v-model="formData.profileImageUrl"
+              hint-text="PNG, JPG hasta 5MB"
+              image-fit="contain"
+              :fallback-image="emptyPlayerImage"
+              :max-size-m-b="2"
             />
-
-            <!-- Modo: CON foto (Editar) -->
-            <div v-if="hasPhoto" class="relative">
-              <div
-                class="relative w-48 h-48 mx-auto rounded-lg border-2 border-gray-300 overflow-hidden group cursor-pointer transition-all hover:border-primary"
-                @click="openFileSelector"
-              >
-                <!-- Imagen actual -->
-                <q-img :src="displayImageUrl" fit="contain" class="w-full h-full">
-                  <template #loading>
-                    <div class="absolute-full flex items-center justify-center bg-gray-100">
-                      <q-spinner color="primary" size="md" />
-                    </div>
-                  </template>
-                  <template #error>
-                    <q-img :src="emptyPlayerImage" fit="contain" class="w-full h-full" />
-                  </template>
-                </q-img>
-
-                <!-- Overlay con iconos al hacer hover -->
-                <div
-                  class="absolute inset-0 bg-black opacity-0 group-hover:opacity-70 transition-all duration-300 flex items-center justify-center gap-4 pointer-events-none"
-                >
-                  <div class="flex gap-6">
-                    <!-- Icono Editar - NO hace nada, el click pasa a través -->
-                    <div class="flex flex-col items-center text-white">
-                      <q-icon name="la la-edit" size="md" />
-                      <span class="text-xs mt-1">Cambiar</span>
-                    </div>
-                    <!-- Icono Eliminar - SÍ captura el click -->
-                    <div
-                      class="flex flex-col items-center text-white cursor-pointer pointer-events-auto"
-                      @click.stop="removePhoto"
-                    >
-                      <q-icon name="la la-trash" size="md" />
-                      <span class="text-xs mt-1">Eliminar</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Modo: SIN foto (Añadir) -->
-            <div v-else class="space-y-2">
-              <!-- Área de upload -->
-              <div
-                class="relative border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer transition-all hover:border-primary hover:bg-gray-50"
-                @click="openFileSelector"
-                @dragover.prevent="isDragging = true"
-                @dragleave.prevent="isDragging = false"
-                @drop.prevent="handleDrop"
-                :class="{ 'border-primary bg-blue-50': isDragging }"
-              >
-                <div class="flex flex-col items-center gap-3">
-                  <q-icon name="la la-cloud-upload-alt" size="xl" color="grey-6" />
-                  <div>
-                    <p class="text-base text-gray-700 font-medium">
-                      Arrastra una imagen o haz clic aquí
-                    </p>
-                    <p class="text-xs text-gray-500 mt-1">PNG, JPG hasta 5MB</p>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Opción URL (secundaria) -->
-              <div class="text-center">
-                <button
-                  type="button"
-                  class="text-sm text-primary hover:underline"
-                  @click="showUrlInput = true"
-                >
-                  o pegar una URL
-                </button>
-              </div>
-
-              <!-- Input URL (toggle) -->
-              <transition name="fade">
-                <div v-if="showUrlInput" class="pt-2">
-                  <q-input
-                    v-model="urlInputValue"
-                    dense
-                    outlined
-                    name="urlInput"
-                    placeholder="https://ejemplo.com/imagen.jpg"
-                    hint="Pega la URL de la imagen del jugador"
-                    :rules="[(val) => !val || isValidUrl(val) || 'URL no válida']"
-                  >
-                    <template #prepend>
-                      <q-icon name="la la-link" />
-                    </template>
-                    <template #append>
-                      <q-btn
-                        flat
-                        dense
-                        round
-                        size="sm"
-                        icon="la la-check"
-                        color="primary"
-                        @click="applyUrl"
-                      />
-                      <q-btn
-                        flat
-                        dense
-                        round
-                        size="sm"
-                        icon="la la-times"
-                        @click="cancelUrlInput"
-                      />
-                    </template>
-                  </q-input>
-                </div>
-              </transition>
-            </div>
           </div>
 
           <q-separator />
@@ -146,6 +32,7 @@
               dense
               outlined
               hide-hint
+              no-error-icon
               label="Nombre *"
               name="firstName"
               :rules="[(val) => !!val || 'El nombre es requerido']"
@@ -155,6 +42,7 @@
               dense
               outlined
               hide-hint
+              no-error-icon
               label="Apellido *"
               name="lastName"
               :rules="[(val) => !!val || 'El apellido es requerido']"
@@ -168,7 +56,7 @@
             outlined
             label="Apodo"
             name="nickname"
-            hint="Ej: 'CR7', 'La Pulga', etc."
+            hint="Ej: 'Furby', 'El Camello', etc."
           />
 
           <!-- Market Value y Rating -->
@@ -271,15 +159,16 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue';
 import { useDialogPluginComponent, QForm } from 'quasar';
-import emptyPlayerImage from 'src/assets/player/empty-player.png';
+import { storeToRefs } from 'pinia';
+import { ImageUploader } from 'src/modules/shared/components/ImageUploader';
 import { GoToolbarHeader } from 'src/modules/shared/components/GoToolbarHeader';
+import { useLineupStore } from 'stores/useLineupStore';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 import {
   LIST_OPTIONS as TEAM_LIST,
   type TeamSelectOption,
 } from 'src/modules/lineup-builder/constants/team.constant';
-import { useLineupStore } from 'stores/useLineupStore';
-import { storeToRefs } from 'pinia';
+import emptyPlayerImage from 'src/assets/player/empty-player.png';
 
 interface Props {
   player: PlayerDto;
@@ -301,12 +190,6 @@ const currentPlayer = computed(() => {
 });
 const formRef = ref<QForm | null>(null);
 const isSaving = ref(false);
-
-// Estados para gestión de foto
-const fileInputRef = ref<HTMLInputElement | null>(null);
-const isDragging = ref(false);
-const showUrlInput = ref(false);
-const urlInputValue = ref('');
 
 // Estados para equipo
 const teamList = TEAM_LIST.filter((team) =>
@@ -340,97 +223,10 @@ watch(
   { deep: true },
 );
 
-// Computed: URL de la imagen a mostrar (foto o placeholder)
-const displayImageUrl = computed(() => {
-  return formData.profileImageUrl || emptyPlayerImage;
-});
-
-// Computed: ¿Tiene foto?
-const hasPhoto = computed(() => {
-  return !!formData.profileImageUrl;
-});
-
 // Computed: Equipo seleccionado
 const selectedTeam = computed(() => {
   return teamList.find((team) => team.label === formData.team);
 });
-
-// Validación de URL
-const isValidUrl = (url: string): boolean => {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-};
-
-// Procesar archivo y crear preview
-const processFile = (file: File) => {
-  // Validar tamaño (5MB)
-  if (file.size > 5 * 1024 * 1024) {
-    alert('La imagen es demasiado grande. Máximo 5MB.');
-    return;
-  }
-
-  // Validar tipo
-  if (!file.type.startsWith('image/')) {
-    alert('Por favor selecciona una imagen válida.');
-    return;
-  }
-
-  // Crear preview del archivo
-  const reader = new FileReader();
-  reader.onload = (event) => {
-    formData.profileImageUrl = event.target?.result as string;
-  };
-  reader.readAsDataURL(file);
-};
-
-// Abrir selector de archivos
-const openFileSelector = () => {
-  fileInputRef.value?.click();
-};
-
-// Manejar cambio de archivo desde input
-const handleFileChange = (event: Event) => {
-  const file = (event.target as HTMLInputElement).files?.[0];
-  if (file) {
-    processFile(file);
-  }
-};
-
-// Manejar drop de archivo
-const handleDrop = (event: DragEvent) => {
-  isDragging.value = false;
-  const file = event.dataTransfer?.files[0];
-  if (file) {
-    processFile(file);
-  }
-};
-
-// Quitar foto
-const removePhoto = () => {
-  formData.profileImageUrl = '';
-  if (fileInputRef.value) {
-    fileInputRef.value.value = '';
-  }
-};
-
-// Aplicar URL
-const applyUrl = () => {
-  if (urlInputValue.value && isValidUrl(urlInputValue.value)) {
-    formData.profileImageUrl = urlInputValue.value;
-    showUrlInput.value = false;
-    urlInputValue.value = '';
-  }
-};
-
-// Cancelar input de URL
-const cancelUrlInput = () => {
-  showUrlInput.value = false;
-  urlInputValue.value = '';
-};
 
 // Filtrar equipos
 const filterTeams = (val: string, update: (fn: () => void) => void) => {
@@ -465,7 +261,7 @@ async function onSaveClick() {
       team: formData.team,
       teamLogo: teamInfo?.logo || '',
       leagueId: teamInfo?.leagueId || null,
-      profileImageUrl: formData.profileImageUrl || null,
+      profileImageUrl: formData.profileImageUrl || process.env.DEFAULT_EMPTY_PLAYER_IMAGE,
     };
 
     // ✅ Persistir los cambios en IndexedDB vía store
