@@ -46,14 +46,17 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { storeToRefs } from 'pinia';
 import {
   LIST_OPTIONS as TEAM_LIST,
   type TeamSelectOption,
 } from 'src/modules/lineup-builder/constants/team.constant';
+import { useCustomEntitiesStore } from 'stores/useCustomEntitiesStore';
+import type { LEAGUE_TYPES } from 'src/modules/lineup-builder/types';
 
 interface Props {
   modelValue: string | TeamSelectOption | null;
-  leagueType?: 'kings' | 'queens' | 'all';
+  leagueType?: LEAGUE_TYPES;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -65,12 +68,25 @@ const emit = defineEmits<{
   teamSelected: [team: TeamSelectOption];
 }>();
 
-// Filtrar equipos según el tipo de liga
+// Obtener equipos personalizados del store
+const customEntitiesStore = useCustomEntitiesStore();
+const { customTeams } = storeToRefs(customEntitiesStore);
+
+// Filtrar equipos según el tipo de liga (incluye personalizados)
 const filteredTeamList = computed(() => {
-  if (props.leagueType === 'all') {
-    return TEAM_LIST;
+  let baseTeams = TEAM_LIST;
+
+  if (props.leagueType !== 'all') {
+    baseTeams = TEAM_LIST.filter((team) => team.type === props.leagueType);
   }
-  return TEAM_LIST.filter((team) => team.type === props.leagueType);
+
+  // Agregar equipos personalizados que coincidan con el tipo de liga
+  const customTeamsFiltered =
+    props.leagueType === 'all'
+      ? customTeams.value
+      : customTeams.value.filter((team) => team.type === props.leagueType);
+
+  return [...baseTeams, ...customTeamsFiltered];
 });
 
 const teamOptions = ref<TeamSelectOption[]>(filteredTeamList.value);

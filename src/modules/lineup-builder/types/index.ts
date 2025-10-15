@@ -100,3 +100,15 @@ export interface FieldArea {
   width: number;
   height: number;
 }
+
+export type LEAGUE_TYPES = 'kings' | 'queens' | 'all';
+
+// Custom entities types
+export type {
+  CustomPlayer,
+  CustomTeam,
+  CustomCoach,
+  CustomPlayerFormData,
+  CustomTeamFormData,
+  CustomCoachFormData,
+} from './custom-entities.types';

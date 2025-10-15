@@ -1,5 +1,6 @@
 import { computed, ref, watch } from 'vue';
 import { acceptHMRUpdate, defineStore } from 'pinia';
+import { useCustomEntitiesStore } from './useCustomEntitiesStore';
 import { CONST } from 'src/modules/lineup-builder/constants';
 import { allPlayers } from 'src/modules/home/data';
 import { getDisplayName } from 'src/modules/shared/utils/getDisplayName.util';
@@ -20,6 +21,9 @@ import type { PlayerPositionAbbreviation } from 'src/modules/players/domain/valu
 export const useLineupStore = defineStore(
   'lineup',
   () => {
+    // Obtener el store de entidades personalizadas
+    const customEntitiesStore = useCustomEntitiesStore();
+
     const lineupName = ref('');
     const lineupTeam = ref<TeamSelectOption | null>(null);
     const lineupCoach = ref<CoachSelectOption | null>(null);
@@ -39,8 +43,9 @@ export const useLineupStore = defineStore(
     const orderBy = ref<OrderBySelectOption>(CONST.ORDER_BY.DEFAULT);
     const playersModified = ref<PlayerDto[]>([]);
 
-    const players = computed<PlayerDto[]>(() =>
-      allPlayers.map((player) => {
+    const players = computed<PlayerDto[]>(() => {
+      // Combinar jugadores originales con jugadores personalizados
+      const originalPlayers = allPlayers.map((player) => {
         const team =
           CONST.TEAM.MAP_OPTIONS[player?.team as keyof typeof CONST.TEAM.MAP_OPTIONS] || null;
 
@@ -55,8 +60,11 @@ export const useLineupStore = defineStore(
           teamLogo: modifiedPlayer?.teamLogo || team?.logo || '',
           leagueId: modifiedPlayer?.leagueId ?? team?.leagueId ?? null,
         };
-      }),
-    );
+      });
+
+      // Agregar jugadores personalizados al final (ya son PlayerDto con isCustomEntity = true)
+      return [...originalPlayers, ...customEntitiesStore.customPlayers];
+    });
 
     const setBudget = (value: number) => {
       budget.value = value;

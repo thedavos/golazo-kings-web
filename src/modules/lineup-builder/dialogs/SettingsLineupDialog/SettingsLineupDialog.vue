@@ -152,6 +152,7 @@ import { GoToolbarHeader } from 'src/modules/shared/components/GoToolbarHeader';
 import { CONST } from 'src/modules/lineup-builder/constants';
 import { useLineupStore } from 'stores/useLineupStore';
 import { useFeedback } from 'src/modules/shared/composables/useFeedback';
+import { useLineupDialogs } from 'src/modules/lineup-builder/composables/useLineupDialogs';
 import type { FormationOption } from 'src/modules/lineup-builder/types';
 
 defineEmits([...useDialogPluginComponent.emits]);
@@ -159,6 +160,7 @@ defineEmits([...useDialogPluginComponent.emits]);
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } = useDialogPluginComponent();
 const feedback = useFeedback();
 const lineupStore = useLineupStore();
+const lineupDialogs = useLineupDialogs();
 
 const { currency, formation, budget, showTeamInLineup, showCoachInLineup } =
   storeToRefs(lineupStore);
@@ -186,12 +188,17 @@ function onOKClick() {
 
 // --- Pestaña 2: Base de Datos ---
 function addNew(type: 'player' | 'team' | 'coach') {
-  // Como definiste, estas acciones abrirían otros dialogs.
-  // Por ahora, solo mostramos una notificación.
-  feedback.info({
-    icon: 'la la-cogs',
-    message: `Abriendo diálogo para añadir nuevo ${type}... (simulado)`,
-  });
+  switch (type) {
+    case 'player':
+      lineupDialogs.openCreateCustomPlayerDialog();
+      break;
+    case 'team':
+      lineupDialogs.openCreateCustomTeamDialog();
+      break;
+    case 'coach':
+      lineupDialogs.openCreateCustomCoachDialog();
+      break;
+  }
 }
 </script>
 

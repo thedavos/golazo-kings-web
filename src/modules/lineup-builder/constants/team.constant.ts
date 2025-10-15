@@ -3,6 +3,8 @@ import type { SelectOption } from 'src/modules/lineup-builder/types';
 export interface TeamSelectOption extends SelectOption {
   logo: string;
   leagueId: number;
+  // Campo para identificar equipos personalizados
+  isCustomEntity?: boolean;
 }
 
 export type TeamSelectOptionList = TeamSelectOption[];

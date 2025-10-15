@@ -40,4 +40,6 @@ export interface PlayerDto {
   teamUuid: string;
   createdAt: string;
   updatedAt: string;
+  // Campo para identificar jugadores personalizados
+  isCustomEntity?: boolean;
 }

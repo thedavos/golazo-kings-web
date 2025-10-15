@@ -21,9 +21,24 @@ declare module 'vue-i18n' {
 }
 /* eslint-enable @typescript-eslint/no-empty-object-type */
 
+// Detectar idioma del navegador o localStorage
+const getInitialLocale = (): MessageLanguages => {
+  const saved = localStorage.getItem('user-locale');
+  if (saved && saved in messages) {
+    return saved as MessageLanguages;
+  }
+
+  const browserLang = navigator.language;
+  if (browserLang in messages) {
+    return browserLang as MessageLanguages;
+  }
+
+  return 'en-US'; // fallback
+};
+
 export default defineBoot(({ app }) => {
   const i18n = createI18n<{ message: MessageSchema }, MessageLanguages>({
-    locale: 'en-US',
+    locale: getInitialLocale(),
     legacy: false,
     messages,
   });

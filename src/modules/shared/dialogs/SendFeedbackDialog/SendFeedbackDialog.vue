@@ -16,6 +16,7 @@
           name="feedbackType"
           color="primary"
           size="sm"
+          inline
           class="mt-2"
           :options="SHARED_CONST.FEEDBACK_OPTIONS"
         />

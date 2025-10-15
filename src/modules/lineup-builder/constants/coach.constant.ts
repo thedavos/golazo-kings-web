@@ -2,6 +2,8 @@ import type { SelectOption } from 'src/modules/lineup-builder/types';
 
 export interface CoachSelectOption extends SelectOption {
   photoUrl: string;
+  // Campo para identificar entrenadores personalizados
+  isCustomEntity?: boolean;
 }
 
 export type CoachSelectOptionList = CoachSelectOption[];

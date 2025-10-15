@@ -9,11 +9,15 @@ import { SendFeedbackDialog } from 'src/modules/shared/dialogs/SendFeedbackDialo
 import { PlayerFormDialog } from 'src/modules/players/dialogs/PlayerFormDialog';
 import { PlayerInformationDialog } from 'src/modules/players/dialogs/PlayerInformationDialog';
 import { CoachLineupDialog } from 'src/modules/lineup-builder/dialogs/CoachLineupDialog';
+import { CustomPlayerFormDialog } from 'src/modules/lineup-builder/dialogs/CustomPlayerFormDialog';
+import { CustomTeamFormDialog } from 'src/modules/lineup-builder/dialogs/CustomTeamFormDialog';
+import { CustomCoachFormDialog } from 'src/modules/lineup-builder/dialogs/CustomCoachFormDialog';
 import { useLineupFeedback } from './useLineupFeedback';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 import type { PlayerSlot } from 'src/modules/lineup-builder/types';
 import type { TeamSelectOption } from 'src/modules/lineup-builder/constants/team.constant';
 import type { CoachSelectOption } from 'src/modules/lineup-builder/constants/coach.constant';
+import type { CustomPlayer, CustomTeam, CustomCoach } from 'src/modules/lineup-builder/types/custom-entities.types';
 
 export function useLineupDialogs() {
   const $q = useQuasar();
@@ -128,6 +132,131 @@ export function useLineupDialogs() {
       });
   };
 
+  // ==================== CUSTOM ENTITIES DIALOGS ====================
+
+  /**
+   * Abre el diálogo para crear un jugador personalizado
+   */
+  const openCreateCustomPlayerDialog = () => {
+    return $q
+      .dialog({
+        component: CustomPlayerFormDialog,
+        componentProps: {
+          mode: 'create',
+        },
+      })
+      .onOk((newPlayer: CustomPlayer) => {
+        console.log('✅ Jugador personalizado creado:', newPlayer);
+        return newPlayer;
+      })
+      .onCancel(() => {
+        console.log('❌ Dialog de crear jugador cancelado');
+      });
+  };
+
+  /**
+   * Abre el diálogo para editar un jugador personalizado
+   */
+  const openEditCustomPlayerDialog = (player: CustomPlayer) => {
+    return $q
+      .dialog({
+        component: CustomPlayerFormDialog,
+        componentProps: {
+          player,
+          mode: 'edit',
+        },
+      })
+      .onOk((updatedPlayer: CustomPlayer) => {
+        console.log('✅ Jugador personalizado actualizado:', updatedPlayer);
+        return updatedPlayer;
+      })
+      .onCancel(() => {
+        console.log('❌ Dialog de editar jugador cancelado');
+      });
+  };
+
+  /**
+   * Abre el diálogo para crear un equipo personalizado
+   */
+  const openCreateCustomTeamDialog = () => {
+    return $q
+      .dialog({
+        component: CustomTeamFormDialog,
+        componentProps: {
+          mode: 'create',
+        },
+      })
+      .onOk((newTeam: CustomTeam) => {
+        console.log('✅ Equipo personalizado creado:', newTeam);
+        return newTeam;
+      })
+      .onCancel(() => {
+        console.log('❌ Dialog de crear equipo cancelado');
+      });
+  };
+
+  /**
+   * Abre el diálogo para editar un equipo personalizado
+   */
+  const openEditCustomTeamDialog = (team: CustomTeam) => {
+    return $q
+      .dialog({
+        component: CustomTeamFormDialog,
+        componentProps: {
+          team,
+          mode: 'edit',
+        },
+      })
+      .onOk((updatedTeam: CustomTeam) => {
+        console.log('✅ Equipo personalizado actualizado:', updatedTeam);
+        return updatedTeam;
+      })
+      .onCancel(() => {
+        console.log('❌ Dialog de editar equipo cancelado');
+      });
+  };
+
+  /**
+   * Abre el diálogo para crear un entrenador personalizado
+   */
+  const openCreateCustomCoachDialog = () => {
+    return $q
+      .dialog({
+        component: CustomCoachFormDialog,
+        componentProps: {
+          mode: 'create',
+        },
+      })
+      .onOk((newCoach: CustomCoach) => {
+        console.log('✅ Entrenador personalizado creado:', newCoach);
+        return newCoach;
+      })
+      .onCancel(() => {
+        console.log('❌ Dialog de crear entrenador cancelado');
+      });
+  };
+
+  /**
+   * Abre el diálogo para editar un entrenador personalizado
+   */
+  const openEditCustomCoachDialog = (coach: CustomCoach) => {
+    return $q
+      .dialog({
+        component: CustomCoachFormDialog,
+        componentProps: {
+          coach,
+          mode: 'edit',
+        },
+      })
+      .onOk((updatedCoach: CustomCoach) => {
+        console.log('✅ Entrenador personalizado actualizado:', updatedCoach);
+        return updatedCoach;
+      })
+      .onCancel(() => {
+        console.log('❌ Dialog de editar entrenador cancelado');
+      });
+  };
+
   return {
     openSaveDialog,
     openSettingsDialog,
@@ -139,5 +268,12 @@ export function useLineupDialogs() {
     openCoachDialog,
     openTeamDialog,
     openSwapPlayerDialog,
+    // Custom entities dialogs
+    openCreateCustomPlayerDialog,
+    openEditCustomPlayerDialog,
+    openCreateCustomTeamDialog,
+    openEditCustomTeamDialog,
+    openCreateCustomCoachDialog,
+    openEditCustomCoachDialog,
   };
 }

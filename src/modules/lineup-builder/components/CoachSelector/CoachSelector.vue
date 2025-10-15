@@ -37,10 +37,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
+import { storeToRefs } from 'pinia';
 import {
   LIST_OPTIONS as COACH_LIST,
   type CoachSelectOption,
 } from 'src/modules/lineup-builder/constants/coach.constant';
+import { useCustomEntitiesStore } from 'stores/useCustomEntitiesStore';
 
 interface Props {
   modelValue: string | CoachSelectOption | null;
@@ -53,7 +55,13 @@ const emit = defineEmits<{
   coachSelected: [coach: CoachSelectOption];
 }>();
 
-const coachOptions = ref<CoachSelectOption[]>(COACH_LIST);
+// Obtener entrenadores personalizados del store
+const customEntitiesStore = useCustomEntitiesStore();
+const { customCoaches } = storeToRefs(customEntitiesStore);
+
+// Combinar entrenadores base + personalizados
+const allCoaches = computed(() => [...COACH_LIST, ...customCoaches.value]);
+const coachOptions = ref<CoachSelectOption[]>(allCoaches.value);
 
 // Computed: Coach seleccionado
 const selectedCoach = computed(() => {
@@ -72,14 +80,16 @@ const handleUpdate = (value: string) => {
   }
 };
 
-// Filtrar coaches
+// Filtrar coaches (incluye personalizados)
 const filterCoaches = (val: string, update: (fn: () => void) => void) => {
   update(() => {
     if (val === '') {
-      coachOptions.value = COACH_LIST;
+      coachOptions.value = allCoaches.value;
     } else {
       const needle = val.toLowerCase();
-      coachOptions.value = COACH_LIST.filter((coach) => coach.label.toLowerCase().includes(needle));
+      coachOptions.value = allCoaches.value.filter((coach) => 
+        coach.label.toLowerCase().includes(needle)
+      );
     }
   });
 };
