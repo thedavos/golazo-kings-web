@@ -28,7 +28,7 @@
       <!-- Foto del jugador superpuesta en la parte superior del badge -->
       <div
         v-if="player && player.profileImageUrl"
-        class="absolute top-[-10px] left-1/2 transform -translate-x-1/2 w-[58px] overflow-hidden"
+        class="absolute top-[-15px] left-1/2 transform -translate-x-1/2 w-[65px] overflow-hidden"
       >
         <q-img
           :src="player.profileImageUrl"
@@ -80,8 +80,8 @@ interface Props {
 }
 
 // ==================== CONSTANTS ====================
-const BADGE_WIDTH = 63; // en píxeles (60 + 5% = 63)
-const BADGE_HEIGHT = 100.41; // Proporción 384:612 del Figma (95.625 + 5% = 100.40625)
+const BADGE_WIDTH = 70;
+const BADGE_HEIGHT = 110;
 
 // ==================== PROPS & EMITS ====================
 
