@@ -52,7 +52,7 @@
       </div>
 
       <!-- Nombre del jugador superpuesto en la parte inferior del badge -->
-      <div class="absolute bottom-[10px] left-0 right-0 flex justify-center">
+      <div class="absolute bottom-[12px] left-0 right-0 flex justify-center">
         <span class="text-Extended-Banner text-[10px] font-bold text-center">
           {{ playerSlot.name }}
         </span>
