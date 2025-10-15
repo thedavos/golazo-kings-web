@@ -33,6 +33,7 @@
       rounded
       no-caps
       dense
+      disable
       size="md"
       label="Compartir"
       icon="la la-share"
