@@ -208,7 +208,7 @@ const isSaving = ref(false);
 
 // Opciones de tipo de liga (filtrar solo kings y queens)
 const leagueTypeOptions = computed<SelectOption[]>(() => {
-  return LEAGUE_LIST.filter((league) => league.type === 'kings' || league.type === 'queens');
+  return LEAGUE_LIST.filter((league) => league.value === 'kings' || league.value === 'queens');
 });
 
 // Form data
@@ -221,6 +221,7 @@ const formData = reactive<{
   team: string;
   teamLogo: string;
   leagueId: number | null;
+  teamId: number | null;
   profileImageUrl: string;
   position: string;
   leagueType: Exclude<LEAGUE_TYPES, 'all'>;
@@ -233,6 +234,7 @@ const formData = reactive<{
   team: props.player?.team || '',
   teamLogo: props.player?.teamLogo || '',
   leagueId: props.player?.leagueId || null,
+  teamId: props.player?.teamId || null,
   profileImageUrl: props.player?.profileImageUrl || '',
   position: props.player?.positionAbbreviation || '',
   leagueType: props.player?.isQueensLeaguePlayer ? 'queens' : 'kings',
@@ -248,6 +250,7 @@ const positionOptions = computed<PlayerPositionSelectOption[]>(() => {
 // Manejar selección de equipo desde TeamSelector
 const handleTeamSelected = (team: TeamSelectOption) => {
   formData.teamLogo = team.logo;
+  formData.teamId = team.teamId;
   formData.leagueId = team.leagueId;
 };
 
@@ -299,7 +302,7 @@ async function onSaveClick() {
       rating: formData.rating || null,
       league: null,
       team: formData.team,
-      teamId: 0,
+      teamId: formData.teamId || 0,
       teamLogo: formData.teamLogo || '',
       leagueId: formData.leagueId || null,
       teamUuid: '',

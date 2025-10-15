@@ -141,6 +141,7 @@ export const useCustomEntitiesStore = defineStore(
         ...team,
         isCustomEntity: true,
       };
+      newTeam.teamId = generateCustomEntityId();
       customTeams.value = [...customTeams.value, newTeam];
       return newTeam;
     };

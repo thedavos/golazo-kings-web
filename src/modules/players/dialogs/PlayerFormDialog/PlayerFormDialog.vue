@@ -259,6 +259,7 @@ async function onSaveClick() {
       marketValue: formData.marketValue || null,
       rating: formData.rating || null,
       team: formData.team,
+      teamId: selectedTeam.value?.teamId || 0,
       teamLogo: teamInfo?.logo || '',
       leagueId: teamInfo?.leagueId || null,
       profileImageUrl: formData.profileImageUrl || process.env.DEFAULT_EMPTY_PLAYER_IMAGE,

@@ -187,6 +187,7 @@ async function onSaveClick() {
       description: formData.description,
       logo: formData.logo,
       leagueId: formData.leagueId,
+      teamId: 0,
       color: formData.color || '',
       type: formData.type,
       icon: '',

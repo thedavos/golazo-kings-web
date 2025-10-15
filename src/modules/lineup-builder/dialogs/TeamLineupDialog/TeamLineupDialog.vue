@@ -149,6 +149,7 @@ const onConfirm = () => {
       description: 'Logo personalizado',
       logo: uploadedLogo.value,
       leagueId: 0,
+      teamId: 0,
       color: '',
       icon: '',
       type: 'kings',

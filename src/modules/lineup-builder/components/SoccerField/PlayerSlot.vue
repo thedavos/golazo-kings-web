@@ -28,7 +28,7 @@
       <!-- Foto del jugador superpuesta en la parte superior del badge -->
       <div
         v-if="player && player.profileImageUrl"
-        class="absolute top-[0.5px] left-1/2 transform -translate-x-1/2 w-[49px] overflow-hidden"
+        class="absolute top-[-12px] left-1/2 transform -translate-x-1/2 w-[58px] overflow-hidden"
       >
         <q-img
           :src="player.profileImageUrl"
