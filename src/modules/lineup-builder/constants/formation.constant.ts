@@ -11,7 +11,7 @@ import type {
 const POR_POSITION = {
   id: 'por',
   x: 0.5,
-  y: 0.68,
+  y: 0.675,
   position: PlayerPosition.PORTERO,
   abbreviation: PlayerPositionAbbreviation.PO,
 };
