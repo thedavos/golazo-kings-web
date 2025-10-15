@@ -163,6 +163,7 @@ import { storeToRefs } from 'pinia';
 import { ImageUploader } from 'src/modules/shared/components/ImageUploader';
 import { GoToolbarHeader } from 'src/modules/shared/components/GoToolbarHeader';
 import { useLineupStore } from 'stores/useLineupStore';
+import { useCustomEntitiesStore } from 'stores/useCustomEntitiesStore';
 import type { PlayerDto } from 'src/modules/players/dtos/player.dto';
 import {
   LIST_OPTIONS as TEAM_LIST,
@@ -179,6 +180,7 @@ const props = defineProps<Props>();
 
 defineEmits([...useDialogPluginComponent.emits]);
 
+const customEntitiesStore = useCustomEntitiesStore();
 const lineupStore = useLineupStore();
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } = useDialogPluginComponent();
 
@@ -266,7 +268,11 @@ async function onSaveClick() {
     };
 
     // ✅ Persistir los cambios en IndexedDB vía store
-    lineupStore.modifyPlayer(props.player.id, updatedPlayer);
+    if (props.player.isCustomEntity) {
+      customEntitiesStore.updateCustomPlayer(props.player.id, updatedPlayer);
+    } else {
+      lineupStore.modifyPlayer(props.player.id, updatedPlayer);
+    }
 
     // Retornar los datos actualizados (para compatibilidad con código existente)
     onDialogOK({
